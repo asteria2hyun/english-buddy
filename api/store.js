@@ -30,22 +30,6 @@ export default async function handler(req, res) {
     const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
     const { action, key, value, prefix } = body;
 
-    if (action === "diag") {
-      const setR = await cmd(["SET", NS + "__diag", "hello123"]);
-      const getR = await cmd(["GET", NS + "__diag"]);
-      res.status(200).json({
-        ok: true, version: "v3-diag",
-        envFound: {
-          KV_URL: !!process.env.KV_REST_API_URL, KV_TOKEN: !!process.env.KV_REST_API_TOKEN,
-          UP_URL: !!process.env.UPSTASH_REDIS_REST_URL, UP_TOKEN: !!process.env.UPSTASH_REDIS_REST_TOKEN,
-        },
-        urlHost: cleanURL.replace(/^https?:\/\//, "").split("/")[0],
-        tokenLen: cleanTOKEN.length,
-        setResult: setR, getResult: getR,
-      });
-      return;
-    }
-
     if (action === "get") {
       const { j } = await cmd(["GET", NS + key]);
       if (j && j.error) { res.status(200).json({ ok: false, error: j.error }); return; }
