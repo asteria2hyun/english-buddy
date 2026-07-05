@@ -1151,7 +1151,42 @@ function openHistDetail(r){
 /* ============ 프로필 ============ */
 const EMOJIS=["🦊","🐰","🐻","🐼","🐥","🐙","🦄","🐯","🐶","🐱","🐨","🐸","🦁","🐢","🐵","🐧"];
 let selEmoji="🦊";
-async function loadProfiles(){ profiles=await store.get('profiles')||[]; activeId=await store.get('activeId'); }
+// 서버/로컬 프로필을 합치기 — 어느 한쪽이 비어도 다른 쪽 데이터를 절대 잃지 않음
+function mergeProfiles(){
+  const map={};
+  [].slice.call(arguments).forEach(listArg=>(listArg||[]).forEach(p=>{
+    if(!p||!p.id) return;
+    const ex=map[p.id];
+    map[p.id]= ex ? Object.assign({},ex,p,{level:Math.max(ex.level||1.6, p.level||1.6)}) : p;
+  }));
+  return Object.values(map);
+}
+// 기록/기억/배지 키에 프로필 id가 남아있으면, 목록에 없어도 프로필을 되살림(보고서에서 이름·레벨 복구)
+async function reconstructProfiles(existingIds){
+  let idKeys=[];
+  try{ idKeys=idKeys.concat(await store.list('report:'), await store.list('memory:'), await store.list('badges:')); }catch(e){}
+  const found=new Set();
+  idKeys.forEach(k=>{ const parts=String(k).split(':'); if(parts[1]) found.add(parts[1]); });
+  const out=[];
+  for(const id of found){
+    if(existingIds.has(id)) continue;
+    let name='친구', emoji='🦊', level=1.6;
+    try{ const rk=(await store.list('report:'+id+':')).sort(); if(rk.length){ const r=await store.get(rk[rk.length-1]); if(r){ name=r.name||name; level=r.levelNum||level; } } }catch(e){}
+    out.push({id,name,emoji,level,created:parseInt(String(id).replace(/\D/g,''),10)||0});
+  }
+  return out;
+}
+async function loadProfiles(){
+  let localP=null, serverP=null;
+  try{ const v=localStorage.getItem('profiles'); if(v) localP=JSON.parse(v); }catch(e){}
+  if(_serverOK){ try{ const d=await _api('get','profiles'); if(d&&d.disabled){ _serverOK=false; } else if(d&&d.ok&&d.value!=null){ serverP=JSON.parse(d.value); } }catch(e){} }
+  let merged=mergeProfiles(serverP, localP);          // 서버+로컬 합치기(로컬 이름 우선, 레벨은 최대값)
+  const recovered=await reconstructProfiles(new Set(merged.map(p=>p.id)));  // 기록에서 누락 프로필 복구
+  if(recovered.length) merged=mergeProfiles(merged, recovered);
+  profiles=merged;
+  if(profiles.length){ await saveProfiles(); }         // 합쳐진 목록을 양쪽에 다시 저장(수렴/복구)
+  activeId=await store.get('activeId');
+}
 async function saveProfiles(){ await store.set('profiles',profiles); }
 function renderProfileSheet(){
   const list=document.getElementById('profList'), title=document.getElementById('psTitle');
