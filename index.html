@@ -38,6 +38,12 @@
   .view{ flex:1; overflow-y:auto; display:none; flex-direction:column; }
   .view.on{ display:flex; }
 
+  /* scenarios (롤플레이) */
+  .scenarios{ display:flex; gap:7px; overflow-x:auto; padding:12px 14px 0; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .scenarios::-webkit-scrollbar{ display:none; }
+  .sc-chip{ flex:0 0 auto; border:1.5px solid var(--line); background:#fff; color:var(--sub); border-radius:999px; padding:8px 13px; font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .sc-chip.on{ background:var(--fox); color:#fff; border-color:var(--fox); }
+
   /* starter */
   .starter{ margin:12px 14px 2px; background:linear-gradient(135deg,var(--sun-soft),#fff); border:2px solid var(--sun); border-radius:20px; padding:14px 15px; }
   .starter .cap{ font-size:11px; font-weight:800; color:var(--amber); letter-spacing:.4px; }
@@ -279,6 +285,7 @@
 
   <!-- 대화 -->
   <section class="view on" id="v-chat">
+    <div class="scenarios" id="scenarios"></div>
     <div class="starter" id="starter">
       <div class="cap">🎲 오늘의 질문 · 🔊 듣고 영어로 대답해요</div>
       <div class="q" id="stQ">—</div>
@@ -330,6 +337,7 @@
       <div class="divider" id="addDivider">➕ 새 학생 추가</div>
       <div class="emoji-grid" id="emojiGrid"></div>
       <input id="newName" placeholder="이름 (예: 서연)" maxlength="12">
+      <input id="newAge" type="number" min="4" max="19" placeholder="나이 (예: 10)" style="margin-top:8px">
       <button class="primary" id="addBtn">추가하고 시작하기</button>
       <button class="ghost" id="closeSheet" style="display:none;">닫기</button>
     </div>
@@ -406,6 +414,7 @@ let currentReportTs=null, histProfileId=null;   // 세션당 보고서 1개 / �
 let amyOutfit={};   // 프로필별 Amy 꾸미기 (hat/face/neck/buddy/bg)
 let recMode='chat', pronTarget='';
 let continuousMode=false, amySpeaking=false, recording=false, awaitingReply=false;
+let childAge=10, activeScenario=null;
 
 const LEVELS=[{e:"🌱",label:"씨앗"},{e:"🌿",label:"새싹"},{e:"🌳",label:"나무"},{e:"🌸",label:"꽃"},{e:"⭐",label:"별"}];
 function levelInfo(n){ const i=Math.max(0,Math.min(4,Math.round(n)-1)); return {n:i+1,e:LEVELS[i].e,label:LEVELS[i].label}; }
@@ -436,6 +445,36 @@ const STARTERS={
 };
 function starterBucket(){ const n=Math.round(levelEMA); return n<=2?"easy":(n===3?"mid":"high"); }
 function newStarter(){ const pool=STARTERS[starterBucket()]; const p=pool[Math.floor(Math.random()*pool.length)]; pendingStarter=p[0]; document.getElementById('stQ').textContent=p[0]; document.getElementById('stK').textContent=p[1]; }
+
+/* ============ 상황극(롤플레이) ============ */
+const SCENARIOS=[
+  {key:'restaurant',label:'🍔 식당',sys:"You are a friendly restaurant waiter and the child is the customer ordering food. Greet her, ask what she wants, suggest simple dishes, and ask about drinks.",opener:"Welcome to Fox Diner! Here is your menu. What would you like to eat today?",openerKr:"폭스 식당에 온 걸 환영해! 여기 메뉴야. 오늘 뭐 먹고 싶어?"},
+  {key:'shopping',label:'🛍️ 가게',sys:"You are a shopkeeper and the child is a customer buying something. Ask what she is looking for, and talk simply about color, size and price.",opener:"Hi! Welcome to my shop. What are you looking for today?",openerKr:"안녕! 우리 가게에 온 걸 환영해. 오늘 뭐 찾고 있어?"},
+  {key:'intro',label:'👋 자기소개',sys:"You are meeting the child for the first time and help her introduce herself: name, age, likes, family and hobbies.",opener:"Hi! Nice to meet you! My name is Juny. What is your name?",openerKr:"안녕! 만나서 반가워! 내 이름은 Juny야. 네 이름은 뭐야?"},
+  {key:'directions',label:'🗺️ 길찾기',sys:"You are a friendly local and the child is a traveler. Practice simple directions: left, right, straight, near, far.",opener:"Hello! You look a little lost. Where do you want to go?",openerKr:"안녕! 길을 좀 잃은 것 같네. 어디로 가고 싶어?"},
+  {key:'zoo',label:'🐾 동물원',sys:"You and the child are visiting a zoo together. Talk about animals, how they look, what they eat, and which ones she likes.",opener:"Wow, we are at the zoo! Look — a big lion over there! What animal do you want to see first?",openerKr:"와, 우리 동물원에 왔어! 저기 봐 — 큰 사자야! 어떤 동물 먼저 보고 싶어?"},
+  {key:'doctor',label:'🩺 병원',sys:"You are a kind doctor and the child is the patient. Ask how she feels and where it hurts, then give gentle, simple advice.",opener:"Hello! I'm Doctor Juny. How are you feeling today?",openerKr:"안녕! 나는 Juny 의사 선생님이야. 오늘 몸은 좀 어때?"}
+];
+function renderScenarioChips(){
+  const el=document.getElementById('scenarios'); if(!el) return;
+  const chips=[{key:'free',label:'🎲 자유 대화'},...SCENARIOS];
+  el.innerHTML=chips.map(s=>`<button class="sc-chip ${((s.key==='free'&&!activeScenario)||(activeScenario&&activeScenario.key===s.key))?'on':''}" data-sc="${s.key}">${s.label}</button>`).join('');
+  el.querySelectorAll('.sc-chip').forEach(b=>b.onclick=()=>startScenario(b.dataset.sc));
+}
+function startScenario(key){
+  if(key==='free'){
+    activeScenario=null; renderScenarioChips();
+    const st=document.getElementById('starter');
+    if(!chat.children.length){ st.style.display='block'; newStarter(); speak(document.getElementById('stQ').textContent); }
+    return;
+  }
+  const sc=SCENARIOS.find(s=>s.key===key); if(!sc) return;
+  activeScenario=sc; renderScenarioChips();
+  document.getElementById('starter').style.display='none';
+  pendingStarter=null;
+  addAmy(sc.opener,sc.openerKr,'');
+  apiMessages.push({role:'assistant',content:sc.opener});
+}
 
 /* ============ 음성 ============ */
 function pickVoice(){ const vs=speechSynthesis.getVoices(); const en=vs.filter(v=>/^en([-_]|$)/i.test(v.lang));
@@ -486,8 +525,9 @@ async function talk(userText){
   const target=levelInfo(levelEMA).n, stretch=(turnCount%4===0);
   const askedNote=pendingStarter?`You just asked her: "${pendingStarter}". She is answering it.`:"";
   const memNote=profileMemory?`\nMEMORY from your past chats with her (use ONE of these naturally to build continuity when it fits, e.g. ask a warm follow-up about something she mentioned before — do NOT list them and don't force it every turn): ${profileMemory}`:"";
-  const system=`You are Juny, a warm, patient, cheerful English tutor (a friendly fox) for a 10-year-old Korean girl. This is a speaking practice study.
-${askedNote}${memNote}
+  const scenarioNote=activeScenario?`\nROLE-PLAY SCENE: ${activeScenario.sys} Stay in character and keep the scene going, but still keep language simple for her level and end with one open-ended question.`:"";
+  const system=`You are Juny, a warm, patient, cheerful English tutor (a friendly fox) for a ${childAge}-year-old Korean child. This is a speaking practice study.
+${askedNote}${memNote}${scenarioNote}
 Her current level is about ${target} out of 5 (1=absolute beginner, 5=fluent kid).
 STYLE:
 - Speak in SIMPLE, SHORT English, only 1-2 short sentences. Match difficulty to level ${target}.
@@ -589,7 +629,7 @@ async function generateReports(goToTab){
   const transcript=sessionLog.map((t,i)=>`(${i+1}) ${childName}: ${t.child}\n    Juny: ${t.amy}`).join("\n");
   const ps=pronSummary();
   const pronNote=ps?`Pronunciation practice: average ${ps.avg}/100 over ${ps.count} tries; words to work on: ${ps.weak.join(', ')||'none'}.`:"No pronunciation practice this session.";
-  const system=`You are an English tutor writing a report about a 10-year-old Korean child (${childName})'s English speaking practice today. Use the transcript. Be warm, specific, encouraging. Write Korean for a Korean parent and child.
+  const system=`You are an English tutor writing a report about a ${childAge}-year-old Korean child (${childName})'s English speaking practice today. Use the transcript. Be warm, specific, encouraging. Write Korean for a Korean parent and child.
 ${pronNote}
 Pay attention to whether she answered in FULL SENTENCES (subject + verb) or only single words/fragments. Comment on this habit in the report, and if she often answered with just words, make "완전한 문장으로 대답하기" one of the improve points and the nextGoal.
 Return ONLY JSON (no markdown) with keys:
@@ -703,17 +743,51 @@ async function collectQuizWords(){
   return Object.values(map);
 }
 function closeQuiz(){ document.getElementById('quizModal').classList.remove('on'); speechSynthesis.cancel(); }
+function shuffleArr(a){ return a.slice().sort(()=>Math.random()-0.5); }
+// 단어 → 한국어 뜻 4지선다 (기본·폴백·혼합용)
+function localMeaningQuiz(words){
+  return shuffleArr(words).slice(0,10).map(correct=>{
+    const distractors=shuffleArr(words.filter(w=>w.word!==correct.word)).slice(0,3).map(w=>w.kr);
+    const opts=shuffleArr([correct.kr,...distractors]);
+    return {word:correct.word, answer:correct.kr, opts, hint:'🔊 이 단어의 뜻은?'};
+  });
+}
+// 영영뜻·반대말·유의어 (Claude가 매번 새로 생성 → 실행할 때마다 다른 문제)
+async function aiQuiz(words){
+  const picked=shuffleArr(words).slice(0,8);
+  const listStr=picked.map(w=>`- ${w.word} (${w.kr})`).join('\n');
+  const seed=Math.floor(Math.random()*100000);
+  const system=`You make a fun, SIMPLE English vocabulary quiz for a ${childAge}-year-old Korean learner. Words she has learned:
+${listStr}
+
+Make up to 6 multiple-choice questions, MIXING these three types:
+- "def": show the WORD; the 4 options are SHORT, very simple English definitions; the correct one defines the word.
+- "antonym": show the WORD; the 4 options are English words; the correct one is the OPPOSITE (반대말).
+- "synonym": show the WORD; the 4 options are English words; the correct one has a SIMILAR meaning (비슷한말).
+Rules: keep everything simple enough for a ${childAge}-year-old. Exactly 4 options each, only ONE correct. Wrong options must be clearly wrong but believable. If a word has no clear antonym, use "def" or "synonym" for it. Make it fresh (seed ${seed}). Do NOT use double quotes inside any option text.
+Return ONLY JSON (no markdown): {"questions":[{"type":"def|antonym|synonym","word":"the word","options":["...","...","...","..."],"answer":<0-3 correct index>}]}`;
+  try{
+    const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1200,system,messages:[{role:'user',content:'Make the quiz now.'}]})});
+    const data=await res.json();
+    const raw=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('').trim();
+    const obj=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    return (obj.questions||[]).filter(q=>q&&q.word&&Array.isArray(q.options)&&q.options.length===4&&typeof q.answer==='number'&&q.answer>=0&&q.answer<4).map(q=>{
+      const opts=q.options.map(o=>String(o).replace(/"/g,'').trim());
+      const ans=opts[q.answer];
+      const hint=q.type==='antonym'?'🔁 이 단어의 반대말은?':q.type==='synonym'?'🤝 이 단어와 비슷한 말은?':'📖 이 단어의 영어 뜻은?';
+      return {word:String(q.word), answer:ans, opts:shuffleArr(opts), hint};
+    });
+  }catch(e){ return []; }
+}
 async function openQuiz(){
   const words=await collectQuizWords();
   const modal=document.getElementById('quizModal'), body=document.getElementById('quizBody');
   modal.classList.add('on');
   if(words.length<4){ body.innerHTML=`<div class="pbig">📚</div><h3>단어가 조금 더 모이면<br>퀴즈를 풀 수 있어요!</h3><p style="color:var(--sub);font-weight:700;margin-top:6px">지금 ${words.length}개 모음 · 4개 이상이면 시작해요</p><div class="prow"><button class="p-ok" id="qClose">확인</button></div>`; document.getElementById('qClose').onclick=closeQuiz; return; }
-  const shuffled=words.slice().sort(()=>Math.random()-0.5);
-  quizQs=shuffled.slice(0,Math.min(10,shuffled.length)).map(correct=>{
-    const distractors=words.filter(w=>w.word!==correct.word).sort(()=>Math.random()-0.5).slice(0,3).map(w=>w.kr);
-    const opts=[correct.kr,...distractors].sort(()=>Math.random()-0.5);
-    return {word:correct.word, answer:correct.kr, opts};
-  });
+  body.innerHTML=`<div class="pbig">🦊</div><h3>퀴즈 만드는 중...</h3><p style="color:var(--sub);font-weight:700;margin-top:6px">배운 단어로 새 문제를 만들어요</p>`;
+  const ai=await aiQuiz(words);                                 // 영영뜻·반대말·유의어
+  const local=localMeaningQuiz(words);                          // 뜻 고르기
+  quizQs = ai.length ? shuffleArr(ai.concat(local)).slice(0,10) : local.slice(0,10);
   quizIdx=0; quizScore=0; renderQuizQ();
 }
 function renderQuizQ(){
@@ -726,7 +800,7 @@ function renderQuizQ(){
     document.getElementById('qRetry').onclick=openQuiz; document.getElementById('qClose').onclick=closeQuiz; return;
   }
   const q=quizQs[quizIdx];
-  body.innerHTML=`<div class="qtop">${quizIdx+1} / ${quizQs.length}</div><div class="qword">${esc(q.word)}</div><div class="qhint">🔊 이 단어의 뜻은?</div><div class="qopts">${q.opts.map(o=>`<button class="qopt" data-o="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
+  body.innerHTML=`<div class="qtop">${quizIdx+1} / ${quizQs.length}</div><div class="qword">${esc(q.word)}</div><div class="qhint">${esc(q.hint||'🔊 이 단어의 뜻은?')}</div><div class="qopts">${q.opts.map(o=>`<button class="qopt" data-o="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
   speak(q.word);
   body.querySelectorAll('.qopt').forEach(b=>b.onclick=()=>{
     const correct=b.dataset.o===q.answer;
@@ -981,13 +1055,15 @@ async function deleteProfile(id){
 }
 document.getElementById('addBtn').onclick=async()=>{
   const name=document.getElementById('newName').value.trim(); if(!name){ document.getElementById('newName').focus(); return; }
-  const p={id:'p'+Date.now(),name,emoji:selEmoji,level:1.6,created:Date.now()};
-  profiles.push(p); await saveProfiles(); document.getElementById('newName').value='';
+  const ageRaw=parseInt(document.getElementById('newAge').value,10);
+  const age=(ageRaw>=4&&ageRaw<=19)?ageRaw:10;
+  const p={id:'p'+Date.now(),name,emoji:selEmoji,age,level:1.6,created:Date.now()};
+  profiles.push(p); await saveProfiles(); document.getElementById('newName').value=''; document.getElementById('newAge').value='';
   await selectProfile(p.id);
 };
 async function selectProfile(id){
   activeId=id; await store.set('activeId',id); P=profiles.find(p=>p.id===id); if(!P) return;
-  childName=P.name; levelEMA=P.level||1.6;
+  childName=P.name; childAge=P.age||10; levelEMA=P.level||1.6;
   const _m=(await store.get('memory:'+P.id))||[]; profileMemory=_m.slice(-6).join(' ');   // 과거 대화 기억 로드
   histProfileId=P.id;   // 기록 탭 기본 = 현재 프로필
   amyOutfit=(await store.get('amyOutfit:'+P.id))||{}; renderAmy();   // Amy 꾸미기 로드
@@ -998,11 +1074,11 @@ async function selectProfile(id){
   document.querySelector('.tab[data-v="chat"]').click();
 }
 function resetSession(){
-  apiMessages=[]; sessionLog=[]; liveVocab={}; pronScores=[]; turnCount=0; reportsData=null; memorySaved=false; currentReportTs=null;
+  apiMessages=[]; sessionLog=[]; liveVocab={}; pronScores=[]; turnCount=0; reportsData=null; memorySaved=false; currentReportTs=null; activeScenario=null;
   continuousMode=false; awaitingReply=false; try{ if(recog) recog.abort(); }catch(e){} recording=false;
   const cb=document.getElementById('convoBtn'); if(cb){ cb.classList.remove('on'); cb.textContent='▶️ 계속 대화하기 (핸즈프리)'; } mic.classList.remove('rec');
   chat.innerHTML=''; document.getElementById('finishWrap').style.display='none';
-  document.getElementById('starter').style.display='block'; newStarter();
+  document.getElementById('starter').style.display='block'; newStarter(); renderScenarioChips();
   renderParent(); renderStudent();
   setTimeout(()=>speak(document.getElementById('stQ').textContent),400);
 }
@@ -1057,6 +1133,7 @@ if(SR){
 
 /* ============ 시작 ============ */
 (async function init(){
+  renderScenarioChips();
   await loadProfiles();
   renderParent(); renderStudent();
   if(!profiles.length){ renderProfileSheet(); document.getElementById('profileSheet').classList.add('on'); }
