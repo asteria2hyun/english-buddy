@@ -420,7 +420,14 @@ Return ONLY a JSON object (no markdown) with keys:
     apiMessages.push({role:'assistant',content:obj.reply});
     sessionLog.push({child:userText,amy:obj.reply,correction:obj.correction||""});
     (obj.vocab||[]).forEach(v=>{ if(v&&v.word) liveVocab[v.word.toLowerCase()]={kr:v.kr||"",word:v.word}; });
-    if(typeof obj.level==='number'){ const prev=levelInfo(levelEMA).n; levelEMA=levelEMA*0.6+obj.level*0.4; const now=levelInfo(levelEMA).n; updateBadge(); if(P){P.level=levelEMA; saveProfiles();} if(now>prev) celebrateLevelUp(now); }
+    if(typeof obj.level==='number'){
+      const prev=levelInfo(levelEMA).n;
+      const gap=obj.level-levelEMA;                          // 실력 추정치 - 현재 레벨
+      // 잘하면 빠르게 업(격차 클수록 더), 못하면 천천히(한 번 실수로 급락 방지)
+      const w = gap>0 ? (gap>=2 ? 0.72 : 0.5) : 0.25;
+      levelEMA = levelEMA*(1-w) + obj.level*w;
+      const now=levelInfo(levelEMA).n; updateBadge(); if(P){P.level=levelEMA; saveProfiles();} if(now>prev) celebrateLevelUp(now);
+    }
     pendingStarter=null; document.getElementById('starter').style.display='none';
     if(turnCount>=3) document.getElementById('finishWrap').style.display='block';
     reportsData=null;
