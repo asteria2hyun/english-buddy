@@ -272,7 +272,7 @@
     <div class="avatar" id="hAvatar">🦊</div>
     <div class="htxt">
       <h1 class="display"><span id="hName">잉글리시 버디</span> <span class="sw" id="hSwitch">전환 ▾</span></h1>
-      <p>Amy와 함께하는 영어 말하기</p>
+      <p>Juny와 함께하는 영어 말하기</p>
     </div>
     <div class="level-badge" id="levelBadge">🌱 Lv.1</div>
   </header>
@@ -446,7 +446,7 @@ function pickVoice(){ const vs=speechSynthesis.getVoices(); const en=vs.filter(v
         ||en.find(v=>/en[-_]?US/i.test(v.lang))||en[0]||null; }
 speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
 function speakRate(){ return [0.72,0.8,0.88,0.95,1.0][levelInfo(levelEMA).n-1]; }
-function setSpeaking(on){ const s=document.getElementById('amyStage'); if(s) s.classList.toggle('speaking',on); const st=document.getElementById('amyStatus'); if(st) st.textContent=on?'🗣️ Amy가 말하고 있어요':'🎤 이제 네가 말할 차례!'; }
+function setSpeaking(on){ const s=document.getElementById('amyStage'); if(s) s.classList.toggle('speaking',on); const st=document.getElementById('amyStatus'); if(st) st.textContent=on?'🗣️ Juny가 말하고 있어요':'🎤 이제 네가 말할 차례!'; }
 function speak(t,fromAmy){
   if(!voiceOn||!t){ if(fromAmy) afterAmy(); return; }
   speechSynthesis.cancel();
@@ -486,7 +486,7 @@ async function talk(userText){
   const target=levelInfo(levelEMA).n, stretch=(turnCount%4===0);
   const askedNote=pendingStarter?`You just asked her: "${pendingStarter}". She is answering it.`:"";
   const memNote=profileMemory?`\nMEMORY from your past chats with her (use ONE of these naturally to build continuity when it fits, e.g. ask a warm follow-up about something she mentioned before — do NOT list them and don't force it every turn): ${profileMemory}`:"";
-  const system=`You are Amy, a warm, patient, cheerful English tutor (a friendly fox) for a 10-year-old Korean girl. This is a speaking practice study.
+  const system=`You are Juny, a warm, patient, cheerful English tutor (a friendly fox) for a 10-year-old Korean girl. This is a speaking practice study.
 ${askedNote}${memNote}
 Her current level is about ${target} out of 5 (1=absolute beginner, 5=fluent kid).
 STYLE:
@@ -586,7 +586,7 @@ function pronSummary(){ if(!pronScores.length) return null; const avg=Math.round
 async function generateReports(goToTab){
   if(sessionLog.length<2){ alert("조금 더 대화한 뒤에 정리해요! 🦊"); return; }
   const btn=document.getElementById('btnFinish'); btn.disabled=true; btn.textContent="📋 보고서 만드는 중...";
-  const transcript=sessionLog.map((t,i)=>`(${i+1}) ${childName}: ${t.child}\n    Amy: ${t.amy}`).join("\n");
+  const transcript=sessionLog.map((t,i)=>`(${i+1}) ${childName}: ${t.child}\n    Juny: ${t.amy}`).join("\n");
   const ps=pronSummary();
   const pronNote=ps?`Pronunciation practice: average ${ps.avg}/100 over ${ps.count} tries; words to work on: ${ps.weak.join(', ')||'none'}.`:"No pronunciation practice this session.";
   const system=`You are an English tutor writing a report about a 10-year-old Korean child (${childName})'s English speaking practice today. Use the transcript. Be warm, specific, encouraging. Write Korean for a Korean parent and child.
@@ -688,7 +688,7 @@ async function renderParent(){
 async function renderStudent(){
   const el=document.getElementById('studentBody'); const v=await currentViewReport();
   const body = v ? `${studentHTML(v.data,v.data.name||childName,v.when,v.live)}${newChatBtn()}`
-                 : (sessionLog.length<2?emptyBlock("아직 보고서가 없어요","Amy랑 조금 더 이야기한 다음에<br>보고서를 받아볼 수 있어요!"):emptyBlock("보고서 준비 완료!","대화 탭에서 <b>‘회화 정리’</b>를 누르면<br>오늘 배운 걸 정리해줄게요 🎉"));
+                 : (sessionLog.length<2?emptyBlock("아직 보고서가 없어요","Juny랑 조금 더 이야기한 다음에<br>보고서를 받아볼 수 있어요!"):emptyBlock("보고서 준비 완료!","대화 탭에서 <b>‘회화 정리’</b>를 누르면<br>오늘 배운 걸 정리해줄게요 🎉"));
   el.innerHTML=`<div class="report">${quizLauncher()}${body}</div>`;
 }
 
@@ -795,7 +795,7 @@ async function renderReward(){
   if(!gN) garden='<span style="color:var(--sub);font-weight:700">아직 씨앗 심기 전이에요.<br>대화를 시작해 정원을 키워요! 🌰</span>';
   el.innerHTML=`<div class="report">
     <div class="rhead"><div class="r-emoji">🏆</div><div><h2 class="display">${esc(childName)}의 보상</h2><div class="date">⭐ 스티커 ${total}개 · 🔥 ${stats.streak}일 연속</div></div></div>
-    <div class="card b"><div class="lbl">⭐ 별 상점 · Amy 꾸미기</div><div class="coinrow"><div class="coinnum">⭐ ${coin}</div><button class="quizbtn" style="width:auto;margin:0;padding:11px 18px" onclick="openShop()">🛍️ 상점 열기</button></div><div class="sub2" style="margin-top:6px">별을 모아 Amy에게 모자·안경·배경을 선물해요!</div></div>
+    <div class="card b"><div class="lbl">⭐ 별 상점 · Juny 꾸미기</div><div class="coinrow"><div class="coinnum">⭐ ${coin}</div><button class="quizbtn" style="width:auto;margin:0;padding:11px 18px" onclick="openShop()">🛍️ 상점 열기</button></div><div class="sub2" style="margin-top:6px">별을 모아 Juny에게 모자·안경·배경을 선물해요!</div></div>
     <div class="card a"><div class="lbl">🔥 연속 출석</div><div class="streakbig">${stats.streak}일 연속!</div><div class="sub2">매일 대화하면 불꽃이 커져요</div></div>
     <div class="card g"><div class="lbl">🌳 나의 정원 · 대화 ${stats.sessions}번</div><div class="garden">${garden}</div></div>
     <div class="card b"><div class="lbl">🎮 게임 놀이터</div>
@@ -905,7 +905,7 @@ async function renderShop(){
   const bal=await loadCoins();
   const owned=(await store.get('owned:'+P.id))||[];
   const cats=[['hat','🎩 모자'],['face','👓 안경'],['neck','🧣 목도리'],['buddy','🎈 친구'],['bg','🎨 배경']];
-  body.innerHTML=`<div class="gtop"><span>🛍️ 별 상점 · Amy 꾸미기</span><button class="gx" id="shClose">✕</button></div>
+  body.innerHTML=`<div class="gtop"><span>🛍️ 별 상점 · Juny 꾸미기</span><button class="gx" id="shClose">✕</button></div>
     <div class="amypreview" id="shopPreview"><div class="afox-wrap big">${amyHTML()}</div></div>
     <div class="coinbal">⭐ 내 별: <b>${bal}</b><span id="shopMsg"></span></div>
     ${cats.map(([c,label])=>`<div class="shopcat"><div class="lbl">${label}</div><div class="shopgrid">${ITEMS.filter(i=>i.cat===c).map(i=>{ const own=owned.includes(i.id); const eq=amyOutfit[i.cat]===i.id; return `<button class="shopitem ${eq?'eq':''}" data-id="${i.id}"><div class="si-e">${i.emoji}</div><div class="si-n">${esc(i.name)}</div><div class="si-p">${eq?'착용중':own?'착용하기':'⭐'+i.price}</div></button>`; }).join('')}</div></div>`).join('')}`;
