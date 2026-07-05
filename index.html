@@ -352,9 +352,6 @@
   <!-- 단어 퀴즈 -->
   <div class="overlay pcenter" id="quizModal"><div class="pmodal" id="quizBody"></div></div>
 
-  <!-- 발음 드릴 (한국인 특화) -->
-  <div class="overlay pcenter" id="phonicsModal"><div class="pmodal" id="phonicsBody"></div></div>
-
   <!-- 게임 놀이터 -->
   <div class="overlay pcenter" id="gameModal"><div class="pmodal" id="gameBody"></div></div>
 
@@ -786,7 +783,6 @@ async function currentViewReport(){
 }
 function newChatBtn(){ return `<button class="newchat" onclick="startNewChat()">🆕 새로운 대화 시작하기</button>`; }
 function quizLauncher(){ return `<button class="quizbtn" onclick="openQuiz()">🎯 지금까지 배운 단어 퀴즈 풀기</button>`; }
-function phonicsLauncher(){ return `<button class="quizbtn" style="background:linear-gradient(135deg,#BFE3FF,#8FC7F5);color:#194b73;box-shadow:0 4px 0 rgba(143,199,245,.5)" onclick="openPhonics()">🗣️ 한국인 특화 발음 연습</button>`; }
 function startNewChat(){ resetSession(); document.querySelector('.tab[data-v="chat"]').click(); }
 async function renderParent(){
   const el=document.getElementById('parentBody'); const v=await currentViewReport();
@@ -798,7 +794,7 @@ async function renderStudent(){
   const el=document.getElementById('studentBody'); const v=await currentViewReport();
   const body = v ? `${studentHTML(v.data,v.data.name||childName,v.when,v.live)}${newChatBtn()}`
                  : (sessionLog.length<2?emptyBlock("아직 보고서가 없어요","Juny랑 조금 더 이야기한 다음에<br>보고서를 받아볼 수 있어요!"):emptyBlock("보고서 준비 완료!","대화 탭에서 <b>‘회화 정리’</b>를 누르면<br>오늘 배운 걸 정리해줄게요 🎉"));
-  el.innerHTML=`<div class="report">${quizLauncher()}${phonicsLauncher()}${body}</div>`;
+  el.innerHTML=`<div class="report">${quizLauncher()}${body}</div>`;
 }
 
 /* ============ 단어 퀴즈 (누적된 단어 기반 4지선다) ============ */
@@ -879,35 +875,6 @@ function renderQuizQ(){
     srsGrade(q.word, correct);   // 맞으면 복습 간격 늘리고, 틀리면 다시 자주 나오게
     setTimeout(()=>{ quizIdx++; renderQuizQ(); }, correct?750:1400);
   });
-}
-
-/* ============ 발음 드릴 (한국인 특화 소리) ============ */
-const PHONICS=[
-  {id:'rl',label:'R vs L',emoji:'🌀',words:['rice','lice','right','light','red','led','road','load','pray','play','fry','fly']},
-  {id:'fp',label:'F vs P',emoji:'💨',words:['fan','pan','coffee','copy','fine','pine','leaf','leap','face','pace']},
-  {id:'th',label:'TH 소리',emoji:'👅',words:['think','three','thank','mouth','this','that','mother','brother','bath','with']},
-  {id:'vb',label:'V vs B',emoji:'🐝',words:['van','ban','very','berry','vest','best','vote','boat','curve','curb']},
-  {id:'zs',label:'Z / S',emoji:'🎐',words:['zoo','zebra','zero','buzz','nose','rose','eyes','prize','busy','music']},
-  {id:'end',label:'끝소리 또렷이',emoji:'🔚',words:['cat','cap','dog','duck','book','milk','bird','hand','jump','desk']}
-];
-function closePhonics(){ document.getElementById('phonicsModal').classList.remove('on'); speechSynthesis.cancel(); }
-function openPhonics(){
-  const body=document.getElementById('phonicsBody');
-  document.getElementById('phonicsModal').classList.add('on');
-  body.innerHTML=`<div class="gtop"><span>🗣️ 발음 연습</span><button class="gx" id="phClose">✕</button></div>
-    <div class="gsub">한국어 화자가 헷갈리기 쉬운 소리만 모았어요. 소리를 골라 따라 말해요!</div>
-    <div class="gmenu">${PHONICS.map(p=>`<button class="gcard" data-id="${p.id}"><div class="ge">${p.emoji}</div><div><div class="gname">${esc(p.label)}</div><div class="gdesc">${p.words.slice(0,4).join(' · ')} …</div></div></button>`).join('')}</div>`;
-  document.getElementById('phClose').onclick=closePhonics;
-  body.querySelectorAll('.gcard').forEach(b=>b.onclick=()=>showPhonicsSet(b.dataset.id));
-}
-function showPhonicsSet(id){
-  const set=PHONICS.find(p=>p.id===id); if(!set) return;
-  const body=document.getElementById('phonicsBody');
-  body.innerHTML=`<div class="gtop"><span>${set.emoji} ${esc(set.label)}</span><button class="gx" id="phBack">←</button></div>
-    <div class="gsub">단어를 누르면 듣고 → 따라 말하기(발음 채점)로 이어져요.</div>
-    <div class="qopts">${set.words.map(w=>`<button class="qopt" data-w="${esc(w)}">🔊 ${esc(w)}</button>`).join('')}</div>`;
-  document.getElementById('phBack').onclick=openPhonics;
-  body.querySelectorAll('.qopt').forEach(b=>b.onclick=()=>{ const w=b.dataset.w; speak(w); setTimeout(()=>startPron(w),700); });
 }
 
 /* ============ 보상 (스티커·스트릭·정원·게임) ============ */
