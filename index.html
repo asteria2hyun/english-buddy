@@ -106,6 +106,31 @@
   .qopt.wrong{ border-color:#E0483C; background:#FCE4E1; color:#E0483C; }
   .qopt:disabled{ cursor:default; }
 
+  /* 보상 탭 */
+  .sub2{ font-size:12px; color:var(--sub); font-weight:700; }
+  .streakbig{ font-family:'Baloo 2',sans-serif; font-size:30px; font-weight:800; color:var(--fox); margin:2px 0; }
+  .garden{ font-size:26px; line-height:1.5; letter-spacing:2px; word-break:break-word; }
+  .unlockbar{ height:14px; background:var(--line); border-radius:999px; overflow:hidden; }
+  .ub-fill{ height:100%; background:linear-gradient(90deg,var(--sun),var(--fox)); border-radius:999px; transition:width .5s; }
+  .badgegrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:4px; }
+  .badge{ background:#fff; border:1.5px solid var(--line); border-radius:14px; padding:10px 6px; text-align:center; opacity:.55; filter:grayscale(.6); }
+  .badge.on{ opacity:1; filter:none; border-color:var(--sun); background:var(--sun-soft); }
+  .badge .be{ font-size:26px; line-height:1.1; }
+  .badge .bn{ font-size:11.5px; font-weight:800; color:var(--ink); margin-top:3px; }
+  .badge .bc{ font-size:10px; font-weight:700; color:var(--sub); margin-top:1px; }
+  .badge.on .bc{ color:var(--amber); }
+  /* 게임 놀이터 */
+  .gtop{ display:flex; align-items:center; justify-content:space-between; font-weight:800; font-size:15px; margin-bottom:4px; }
+  .gx{ border:none; background:var(--line); color:var(--ink); width:28px; height:28px; border-radius:50%; font-size:14px; font-weight:800; cursor:pointer; }
+  .gsub{ font-size:12.5px; color:var(--sub); font-weight:700; margin-bottom:14px; }
+  .gmenu{ display:flex; flex-direction:column; gap:10px; }
+  .gcard{ display:flex; align-items:center; gap:12px; text-align:left; border:2px solid var(--line); background:#fff; border-radius:16px; padding:14px; cursor:pointer; font-family:inherit; }
+  .gcard:active{ transform:scale(.99); } .gcard .ge{ font-size:30px; } .gcard .gname{ font-size:15px; font-weight:800; color:var(--ink); } .gcard .gdesc{ font-size:12px; color:var(--sub); font-weight:700; }
+  .memgrid{ display:grid; gap:8px; margin-top:6px; }
+  .memcard{ aspect-ratio:1/1; border:none; border-radius:13px; background:var(--fox-soft); color:var(--ink); font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; display:grid; place-items:center; padding:4px; word-break:break-word; line-height:1.15; }
+  .memcard.up{ background:var(--sun-soft); border:2px solid var(--sun); }
+  .memcard.matched{ background:var(--grass-soft); color:var(--grass); border:2px solid var(--grass); }
+
   .finish-wrap{ padding:4px 14px 10px; }
   .finish{ width:100%; border:none; background:var(--grass); color:#fff; border-radius:16px; padding:13px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; box-shadow:0 4px 0 rgba(95,169,124,.35); }
   .finish:active{ transform:translateY(2px); box-shadow:none; } .finish:disabled{ opacity:.5; box-shadow:none; }
@@ -253,14 +278,16 @@
     </div>
   </section>
 
-  <section class="view" id="v-parent"><div id="parentBody"></div></section>
   <section class="view" id="v-student"><div id="studentBody"></div></section>
+  <section class="view" id="v-reward"><div id="rewardBody"></div></section>
+  <section class="view" id="v-parent"><div id="parentBody"></div></section>
   <section class="view" id="v-history"><div id="historyBody"></div></section>
 
   <nav class="tabs">
     <button class="tab on" data-v="chat"><span class="ic">💬</span>대화</button>
-    <button class="tab" data-v="parent"><span class="ic">👨‍👩‍👧</span>부모</button>
     <button class="tab" data-v="student"><span class="ic">🎒</span>학생</button>
+    <button class="tab" data-v="reward"><span class="ic">🏆</span>보상</button>
+    <button class="tab" data-v="parent"><span class="ic">👨‍👩‍👧</span>부모</button>
     <button class="tab" data-v="history"><span class="ic">📅</span>기록</button>
   </nav>
 
@@ -287,8 +314,11 @@
   <!-- 단어 퀴즈 -->
   <div class="overlay pcenter" id="quizModal"><div class="pmodal" id="quizBody"></div></div>
 
+  <!-- 게임 놀이터 -->
+  <div class="overlay pcenter" id="gameModal"><div class="pmodal" id="gameBody"></div></div>
+
   <!-- 레벨업 축하 -->
-  <div class="levelup" id="levelup"><div class="lu-card"><div class="lu-badge" id="luBadge">🌿</div><div class="lu-title">LEVEL UP!</div><div class="lu-sub" id="luSub"></div></div></div>
+  <div class="levelup" id="levelup"><div class="lu-card"><div class="lu-badge" id="luBadge">🌿</div><div class="lu-title" id="luTitle">LEVEL UP!</div><div class="lu-sub" id="luSub"></div></div></div>
 </div>
 
 <script>
@@ -347,14 +377,20 @@ const LEVELS=[{e:"🌱",label:"씨앗"},{e:"🌿",label:"새싹"},{e:"🌳",labe
 function levelInfo(n){ const i=Math.max(0,Math.min(4,Math.round(n)-1)); return {n:i+1,e:LEVELS[i].e,label:LEVELS[i].label}; }
 function updateBadge(){ const L=levelInfo(levelEMA); document.getElementById('levelBadge').textContent=`${L.e} Lv.${L.n}·${L.label}`; }
 function chime(){ try{ const ac=new (window.AudioContext||window.webkitAudioContext)(); const notes=[523,659,784,1047]; notes.forEach((f,i)=>{ const o=ac.createOscillator(),g=ac.createGain(); o.type='triangle'; o.frequency.value=f; o.connect(g); g.connect(ac.destination); const t=ac.currentTime+i*0.12; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.25,t+0.03); g.gain.exponentialRampToValueAtTime(0.001,t+0.35); o.start(t); o.stop(t+0.36); }); }catch(e){} }
-function celebrateLevelUp(n){
-  const L=levelInfo(n), lu=document.getElementById('levelup');
-  document.getElementById('luBadge').textContent=L.e;
-  document.getElementById('luSub').innerHTML=`<b>Lv.${L.n} · ${L.label}</b> 단계가 됐어요!`;
+function celebrate(emoji,title,subHTML){
+  const lu=document.getElementById('levelup');
+  document.getElementById('luBadge').textContent=emoji;
+  document.getElementById('luTitle').textContent=title;
+  document.getElementById('luSub').innerHTML=subHTML;
   const colors=['#F08A5D','#FFC94B','#5FA97C','#5B87C7','#C77A3C'];
   for(let i=0;i<26;i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=(Math.random()*100)+'%'; c.style.background=colors[i%colors.length]; c.style.animationDuration=(1.6+Math.random()*1.2)+'s'; c.style.animationDelay=(Math.random()*0.3)+'s'; lu.appendChild(c); setTimeout(()=>c.remove(),3200); }
   lu.classList.add('on'); chime();
   setTimeout(()=>lu.classList.remove('on'),2600);
+}
+function celebrateBadges(list){ if(!list||!list.length) return; const b=list[0]; celebrate(b.e,'NEW STICKER! 🎉',`<b>${esc(b.n)}</b> 스티커 획득!${list.length>1?` 외 ${list.length-1}개`:''}`); }
+function celebrateLevelUp(n){
+  const L=levelInfo(n);
+  celebrate(L.e,'LEVEL UP!',`<b>Lv.${L.n} · ${L.label}</b> 단계가 됐어요!`);
 }
 document.addEventListener('click',e=>{ const lu=document.getElementById('levelup'); if(lu.classList.contains('on')&&e.target.closest('.levelup')) lu.classList.remove('on'); });
 
@@ -506,7 +542,7 @@ document.querySelectorAll('.tab').forEach(t=>{ t.onclick=()=>{
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
   t.classList.add('on'); const v=t.dataset.v; document.getElementById('v-'+v).classList.add('on');
   if(v!=='chat' && continuousMode){ continuousMode=false; const cb=document.getElementById('convoBtn'); cb.classList.remove('on'); cb.textContent='▶️ 계속 대화하기 (핸즈프리)'; try{ if(recog) recog.abort(); }catch(e){} recording=false; mic.classList.remove('rec'); speechSynthesis.cancel(); }
-  if(v==='parent') renderParent(); if(v==='student') renderStudent(); if(v==='history') renderHistory();
+  if(v==='parent') renderParent(); if(v==='student') renderStudent(); if(v==='reward') renderReward(); if(v==='history') renderHistory();
 }; });
 
 /* ============ 보고서 생성/저장 ============ */
@@ -548,6 +584,7 @@ corrections: 실수 문장뿐 아니라, 단어로만 답한 경우 그것을 �
     profileMemory=trimmed.join(' ');
     memorySaved=true;
   }
+  try{ const stats=await profileStats(); await updateBadges(stats,true); }catch(e){}   // 스티커 판정 + 새 스티커 축하
   btn.disabled=false; btn.textContent="📋 다시 정리하기 (보고서 새로고침)";
   renderParent(); renderStudent();
   if(goToTab) document.querySelector('.tab[data-v="student"]').click();
@@ -649,6 +686,7 @@ function renderQuizQ(){
   const body=document.getElementById('quizBody');
   if(quizIdx>=quizQs.length){
     const total=quizQs.length, pct=Math.round(quizScore/total*100);
+    if(P){ store.get('quizbest:'+P.id).then(prev=>{ if(pct>(prev||0)) store.set('quizbest:'+P.id,pct); }); }
     const face=pct>=80?'🌟':pct>=50?'🦊':'💪', msg=pct>=80?'최고야! 단어 박사! 🎉':pct>=50?'잘했어! 조금만 더!':'좋은 도전이야! 다시 해볼까?';
     body.innerHTML=`<div class="pbig">${face}</div><h3>${msg}</h3><div class="pscore" style="color:var(--grass)">${quizScore} / ${total}</div><div class="prow"><button class="p-retry" id="qRetry">🔁 다시 풀기</button><button class="p-ok" id="qClose">확인</button></div>`;
     document.getElementById('qRetry').onclick=openQuiz; document.getElementById('qClose').onclick=closeQuiz; return;
@@ -662,6 +700,128 @@ function renderQuizQ(){
     if(correct) quizScore++;
     setTimeout(()=>{ quizIdx++; renderQuizQ(); }, correct?750:1400);
   });
+}
+
+/* ============ 보상 (스티커·스트릭·정원·게임) ============ */
+const BADGES=[
+  {id:'first',e:'🎉',n:'첫 대화',cond:'첫 대화 완료',need:s=>s.sessions>=1},
+  {id:'talk5',e:'🗣️',n:'수다쟁이',cond:'대화 5번',need:s=>s.sessions>=5},
+  {id:'talk10',e:'💬',n:'대화 마스터',cond:'대화 10번',need:s=>s.sessions>=10},
+  {id:'talk20',e:'🏅',n:'대화 챔피언',cond:'대화 20번',need:s=>s.sessions>=20},
+  {id:'streak3',e:'🔥',n:'3일 개근',cond:'3일 연속 대화',need:s=>s.streak>=3},
+  {id:'streak7',e:'🔥',n:'일주일 개근',cond:'7일 연속 대화',need:s=>s.streak>=7},
+  {id:'pron75',e:'👏',n:'또박또박',cond:'발음 75점',need:s=>s.bestPron>=75},
+  {id:'pron90',e:'🌟',n:'발음 스타',cond:'발음 90점',need:s=>s.bestPron>=90},
+  {id:'words20',e:'📚',n:'단어 수집가',cond:'단어 20개',need:s=>s.words>=20},
+  {id:'words50',e:'📖',n:'단어 부자',cond:'단어 50개',need:s=>s.words>=50},
+  {id:'lv2',e:'🌿',n:'새싹',cond:'Lv.2 도달',need:s=>s.maxLevel>=2},
+  {id:'lv3',e:'🌳',n:'나무',cond:'Lv.3 도달',need:s=>s.maxLevel>=3},
+  {id:'lv4',e:'🌸',n:'꽃',cond:'Lv.4 도달',need:s=>s.maxLevel>=4},
+  {id:'lv5',e:'⭐',n:'별',cond:'Lv.5 도달',need:s=>s.maxLevel>=5},
+  {id:'quiz80',e:'✅',n:'퀴즈 고수',cond:'퀴즈 80점',need:s=>s.bestQuiz>=80},
+  {id:'quiz100',e:'🧠',n:'퀴즈 만점',cond:'퀴즈 만점',need:s=>s.bestQuiz>=100},
+];
+function calcStreak(daysSet){
+  const key=d=>`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const d=new Date();
+  if(!daysSet.has(key(d))){ d.setDate(d.getDate()-1); if(!daysSet.has(key(d))) return 0; }
+  let n=0; while(daysSet.has(key(d))){ n++; d.setDate(d.getDate()-1); } return n;
+}
+async function profileStats(){
+  const keys=await store.list(`report:${P.id}:`);
+  const reports=[]; for(const k of keys){ const r=await store.get(k); if(r) reports.push(r); }
+  const words=new Set(); let bestPron=0, maxLevel=levelInfo(P.level||1.6).n; const days=new Set();
+  reports.forEach(r=>{
+    if(r.student&&r.student.vocab) r.student.vocab.forEach(v=>{ if(v&&v.word) words.add(v.word.toLowerCase()); });
+    if(r.pron&&r.pron.avg>bestPron) bestPron=r.pron.avg;
+    if(r.levelNum>maxLevel) maxLevel=r.levelNum;
+    const d=new Date(r.ts); days.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+  });
+  const bestQuiz=(await store.get('quizbest:'+P.id))||0;
+  return {sessions:reports.length, words:words.size, bestPron, maxLevel, bestQuiz, streak:calcStreak(days)};
+}
+async function updateBadges(stats,doCelebrate){
+  const earned=BADGES.filter(b=>b.need(stats)).map(b=>b.id);
+  const seen=(await store.get('badges:'+P.id))||[];
+  const fresh=earned.filter(id=>!seen.includes(id));
+  if(fresh.length || earned.length!==seen.length){ await store.set('badges:'+P.id,[...new Set([...seen,...earned])]); }
+  if(doCelebrate && fresh.length) celebrateBadges(fresh.map(id=>BADGES.find(b=>b.id===id)));
+  return earned;
+}
+async function renderReward(){
+  const el=document.getElementById('rewardBody');
+  if(!P){ el.innerHTML=`<div class="report">${emptyBlock("학생을 먼저 선택해주세요","")}</div>`; return; }
+  const stats=await profileStats();
+  const earned=await updateBadges(stats,false);
+  const total=earned.length, unlocked=total>=10;
+  const flowerEmojis=['🌱','🌿','🌷','🌸','🌻','🌼'];
+  let garden=''; const gN=Math.min(stats.sessions,24);
+  for(let i=0;i<gN;i++) garden+=flowerEmojis[Math.min(5,Math.floor(i/4))];
+  if(!gN) garden='<span style="color:var(--sub);font-weight:700">아직 씨앗 심기 전이에요.<br>대화를 시작해 정원을 키워요! 🌰</span>';
+  el.innerHTML=`<div class="report">
+    <div class="rhead"><div class="r-emoji">🏆</div><div><h2 class="display">${esc(childName)}의 보상</h2><div class="date">⭐ 스티커 ${total}개 · 🔥 ${stats.streak}일 연속</div></div></div>
+    <div class="card a"><div class="lbl">🔥 연속 출석</div><div class="streakbig">${stats.streak}일 연속!</div><div class="sub2">매일 대화하면 불꽃이 커져요</div></div>
+    <div class="card g"><div class="lbl">🌳 나의 정원 · 대화 ${stats.sessions}번</div><div class="garden">${garden}</div></div>
+    <div class="card b"><div class="lbl">🎮 게임 놀이터</div>
+      ${unlocked
+        ? `<div class="sub2" style="margin-bottom:8px">스티커 10개 달성! 게임이 열렸어요 🎉</div><button class="quizbtn" style="margin:0" onclick="openGamePlayground()">🎮 게임하러 가기!</button>`
+        : `<div class="unlockbar"><div class="ub-fill" style="width:${Math.round(total/10*100)}%"></div></div><div class="sub2" style="margin-top:7px">스티커 <b>${total}/10</b> · ${10-total}개 더 모으면 게임이 열려요! 🔓</div>`}
+    </div>
+    <div class="card"><div class="lbl">⭐ 내 스티커 (${total}/${BADGES.length})</div>
+      <div class="badgegrid">${BADGES.map(b=>{ const has=earned.includes(b.id); return `<div class="badge ${has?'on':''}"><div class="be">${has?b.e:'🔒'}</div><div class="bn">${esc(b.n)}</div><div class="bc">${has?'획득! ✨':esc(b.cond)}</div></div>`; }).join('')}</div>
+    </div>
+  </div>`;
+}
+
+/* ============ 게임 놀이터 ============ */
+function closeGame(){ document.getElementById('gameModal').classList.remove('on'); speechSynthesis.cancel(); }
+function openGamePlayground(){
+  const body=document.getElementById('gameBody');
+  document.getElementById('gameModal').classList.add('on');
+  body.innerHTML=`<div class="gtop"><span>🎮 게임 놀이터</span><button class="gx" id="gClose">✕</button></div>
+    <div class="gsub">지금까지 배운 단어로 놀아요! (레벨에 맞춰 조절돼요)</div>
+    <div class="gmenu">
+      <button class="gcard" id="gMem"><div class="ge">🃏</div><div class="gname">단어 짝 맞추기</div><div class="gdesc">뒤집어 짝 찾기</div></button>
+      <button class="gcard" id="gQuiz"><div class="ge">🧠</div><div class="gname">단어 뜻 퀴즈</div><div class="gdesc">4개 중 정답 고르기</div></button>
+    </div>`;
+  document.getElementById('gClose').onclick=closeGame;
+  document.getElementById('gMem').onclick=startMemory;
+  document.getElementById('gQuiz').onclick=()=>{ closeGame(); openQuiz(); };
+}
+let memCards=[], memFlip=[], memDone=0, memLock=false;
+async function startMemory(){
+  const words=await collectQuizWords();
+  const body=document.getElementById('gameBody'); document.getElementById('gameModal').classList.add('on');
+  const lvl=levelInfo(levelEMA).n;
+  const pairs=Math.min([3,3,4,5,6][lvl-1]||4, words.length);
+  if(pairs<3){ body.innerHTML=`<div class="pbig">🃏</div><h3>단어가 조금 더 모이면<br>짝 맞추기를 할 수 있어요!</h3><p class="sub2" style="margin-top:6px">지금 ${words.length}개 · 3개 이상 필요해요</p><div class="prow"><button class="p-ok" id="gBack">확인</button></div>`; document.getElementById('gBack').onclick=openGamePlayground; return; }
+  const chosen=words.slice().sort(()=>Math.random()-0.5).slice(0,pairs);
+  memCards=[]; chosen.forEach((w,i)=>{ memCards.push({pair:i,face:w.word,en:true}); memCards.push({pair:i,face:w.kr,en:false}); });
+  memCards.sort(()=>Math.random()-0.5); memFlip=[]; memDone=0; memLock=false; renderMemory();
+}
+function renderMemory(){
+  const body=document.getElementById('gameBody');
+  const cols=memCards.length<=8?3:4;
+  body.innerHTML=`<div class="gtop"><span>🃏 짝 맞추기 (${memDone}/${memCards.length/2})</span><button class="gx" id="gClose">✕</button></div>
+    <div class="memgrid" style="grid-template-columns:repeat(${cols},1fr)">${memCards.map((c,i)=>`<button class="memcard ${c.matched?'matched':''} ${c.up?'up':''}" data-i="${i}">${(c.up||c.matched)?esc(c.face):'❓'}</button>`).join('')}</div>`;
+  document.getElementById('gClose').onclick=closeGame;
+  body.querySelectorAll('.memcard').forEach(b=>b.onclick=()=>flipCard(+b.dataset.i));
+}
+function flipCard(i){
+  if(memLock) return; const c=memCards[i]; if(!c||c.up||c.matched) return;
+  c.up=true; if(c.en) speak(c.face); memFlip.push(i); renderMemory();
+  if(memFlip.length===2){
+    memLock=true; const [a,b]=memFlip;
+    if(memCards[a].pair===memCards[b].pair){
+      setTimeout(()=>{ memCards[a].matched=memCards[b].matched=true; memFlip=[]; memDone++; memLock=false; (memDone===memCards.length/2)?memWin():renderMemory(); },550);
+    } else {
+      setTimeout(()=>{ memCards[a].up=memCards[b].up=false; memFlip=[]; memLock=false; renderMemory(); },950);
+    }
+  }
+}
+function memWin(){
+  document.getElementById('gameBody').innerHTML=`<div class="pbig">🎉</div><h3>다 맞췄어요! 최고예요!</h3><div class="prow"><button class="p-retry" id="mRetry">🔁 다시</button><button class="p-ok" id="mBack">놀이터로</button></div>`;
+  document.getElementById('mRetry').onclick=startMemory; document.getElementById('mBack').onclick=openGamePlayground; chime();
 }
 
 /* ============ 기록 ============ */
