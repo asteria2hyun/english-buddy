@@ -35,11 +35,13 @@
   .tab .ic{ font-size:19px; }
   .tab.on{ color:var(--fox); background:var(--fox-soft); }
 
-  .view{ flex:1; overflow-y:auto; display:none; flex-direction:column; }
+  .view{ flex:1; min-height:0; overflow-y:auto; display:none; flex-direction:column; }
   .view.on{ display:flex; }
+  /* 대화 화면은 메시지 영역만 스크롤 → 상황칩·입력창이 항상 보임 */
+  #v-chat{ overflow:hidden; }
 
-  /* scenarios (롤플레이) */
-  .scenarios{ display:flex; gap:7px; overflow-x:auto; padding:12px 14px 0; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  /* scenarios (롤플레이) — 상단 고정 바 */
+  .scenarios{ flex:0 0 auto; display:flex; gap:7px; overflow-x:auto; padding:10px 14px; background:var(--sky); border-bottom:1px solid var(--line); -webkit-overflow-scrolling:touch; scrollbar-width:none; }
   .scenarios::-webkit-scrollbar{ display:none; }
   .sc-chip{ flex:0 0 auto; border:1.5px solid var(--line); background:#fff; color:var(--sub); border-radius:999px; padding:8px 13px; font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; white-space:nowrap; }
   .sc-chip.on{ background:var(--fox); color:#fff; border-color:var(--fox); }
@@ -53,7 +55,7 @@
   .starter .row button{ border:none; border-radius:12px; padding:8px 12px; font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; }
   .b-hear{ background:var(--sun); color:#6b4b12; } .b-new{ background:#fff; color:var(--amber); border:1.5px solid var(--sun) !important; }
 
-  .chat{ flex:1; padding:13px 13px 6px; display:flex; flex-direction:column; gap:12px; }
+  .chat{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:13px 13px 6px; display:flex; flex-direction:column; gap:12px; }
   .row{ display:flex; gap:8px; align-items:flex-end; max-width:90%; }
   .row.me{ align-self:flex-end; flex-direction:row-reverse; }
   .mini{ width:29px; height:29px; border-radius:50%; display:grid; place-items:center; font-size:15px; flex:0 0 auto; }
@@ -82,6 +84,25 @@
   @keyframes eq{ 0%,100%{height:6px} 50%{height:22px} }
   .astatus{ font-size:12.5px; font-weight:800; color:var(--sub); }
   .amystage.speaking .astatus{ color:var(--fox); }
+
+  /* ===== 기기·화면 맞춤 (반응형) ===== */
+  /* 태블릿/PC: 가운데 카드처럼 보기 좋게 */
+  @media (min-width:600px){
+    body{ align-items:center; }
+    .app{ height:96dvh; max-height:900px; border-radius:22px; box-shadow:0 12px 40px rgba(60,80,110,.16); overflow:hidden; }
+  }
+  /* 화면이 낮을 때(작은 폰·가로): 말하는 캐릭터 영역 축소해 대화 공간 확보 */
+  @media (max-height:620px){
+    .amystage{ padding:6px 0 2px; gap:2px; }
+    .afox{ font-size:34px; } .afox-wrap{ width:44px; height:44px; }
+    .awave{ height:13px; } .astatus{ font-size:11px; }
+    .starter{ padding:9px 13px; margin:8px 12px 0; }
+  }
+  /* 가로모드 좁은 화면: 캐릭터 무대 숨기고 대화에 집중 */
+  @media (orientation:landscape) and (max-height:460px){
+    .amystage{ display:none; }
+    .starter{ margin:6px 12px 0; }
+  }
   /* 음성 메시지 버블 (영어 텍스트 숨김) */
   .bubble.voice .vmrow{ display:flex; align-items:center; gap:9px; }
   .vmwave{ display:flex; align-items:center; gap:2.5px; height:16px; }
@@ -557,7 +578,7 @@ function addMe(t){ const r=document.createElement('div'); r.className='row me'; 
 function addAmy(reply,kr,fix){
   const r=document.createElement('div'); r.className='row amy';
   // 회화 연습: 영어 문장을 화면에 보여주지 않음(읽고 따라하지 않도록). 음성으로만 듣고 대답.
-  let h=`<div class="mini amy">🦊</div><div class="bubble voice"><div class="vmrow"><div class="vmwave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="vmlabel">🔊 듣고 대답해요</span></div>`;
+  let h=`<div class="mini amy">${buddyEmoji()}</div><div class="bubble voice"><div class="vmrow"><div class="vmwave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="vmlabel">🔊 듣고 대답해요</span></div>`;
   if(fix) h+=`<div class="fix">💡 ${esc(fix)}</div>`;
   h+=`<div class="amybtns"><span class="s-hear">🔊 다시 듣기</span><span class="s-say">🎙️ 따라 말하기</span></div></div>`;
   r.innerHTML=h;
@@ -565,7 +586,7 @@ function addAmy(reply,kr,fix){
   r.querySelector('.s-say').onclick=()=>startPron(reply);
   chat.appendChild(r); scrollDown(); speak(reply,true);
 }
-function addTyping(){ const r=document.createElement('div'); r.className='row amy typing'; r.id='typing'; r.innerHTML=`<div class="mini amy">🦊</div><div class="bubble"><span class="dot">●</span><span class="dot">●</span><span class="dot">●</span></div>`; chat.appendChild(r); scrollDown(); }
+function addTyping(){ const r=document.createElement('div'); r.className='row amy typing'; r.id='typing'; r.innerHTML=`<div class="mini amy">${buddyEmoji()}</div><div class="bubble"><span class="dot">●</span><span class="dot">●</span><span class="dot">●</span></div>`; chat.appendChild(r); scrollDown(); }
 function rmTyping(){ const t=document.getElementById('typing'); if(t)t.remove(); }
 
 /* ============ 한 턴 대화 ============ */
@@ -585,7 +606,12 @@ Her current level is about ${target} out of 5 (1=absolute beginner, 5=fluent kid
 STYLE:
 - Speak in SIMPLE, SHORT English, only 1-2 short sentences. Match difficulty to level ${target}.
 - Be warm and encouraging, but do NOT call her by name — never say her name or insert it into sentences. Just talk naturally.
-- ALWAYS end with ONE easy, OPEN-ENDED question she can explain or describe — ask "what / why / how / tell me about...", and NEVER a yes/no question (avoid "Do you like...?", "Is it...?").
+- USUALLY end with ONE easy, OPEN-ENDED question she can explain or describe — ask "what / why / how / tell me about...", and avoid yes/no questions ("Do you like...?", "Is it...?"). But read the CONTEXT below first.
+CONTEXT & FLOW (very important — be a real friend who is listening, NOT a question machine):
+- React to what she ACTUALLY said and the moment. Respond to the situation first; only then maybe ask.
+- If she is saying goodbye or leaving (e.g. "bye", "byebye", "I have to go", "I'm going to school", "가야 해", "그만할래"), warmly say goodbye back and DO NOT ask a new question — let the chat end nicely (e.g. "Bye! Have fun at school! See you next time! 👋").
+- If she asks YOU a question, answer it kindly first.
+- If she seems tired, confused, or changes the subject, follow her lead. Never ignore the situation just to force in a question.
 ${stretch?'- CHALLENGE: this turn, gently include ONE slightly harder word or a bit longer sentence to help her grow, kept understandable.':''}
 - If she made a mistake, model the correct sentence gently.
 FULL-SENTENCE COACHING (important):
@@ -593,7 +619,7 @@ FULL-SENTENCE COACHING (important):
 - Model complete sentences with subject + verb. Keep encouraging her to speak in full sentences, but never scold. For very low level (1), one short full sentence is enough.
 - When she DOES answer in a full sentence, praise that effort specifically ("Great full sentence!").
 Return ONLY a JSON object (no markdown) with keys:
-"reply": your English response (1-2 short sentences, ends with a question),
+"reply": your English response (1-2 short sentences; usually ends with a question, but NOT when she is saying goodbye/leaving or the moment just calls for reacting warmly),
 "korean": natural Korean translation of your reply,
 "correction": if she made a grammar/word mistake OR answered with only a word/fragment, ONE short gentle Korean tip. For fragments, show the full English sentence she could say (e.g. "‘Blue’보다 ‘My favorite color is blue.’처럼 문장으로 말해봐요"); else "",
 "level": integer 1-5 estimate of HER level from her message,
@@ -1039,7 +1065,8 @@ const ITEMS=[
 ];
 const BGMAP={ bg_sakura:'linear-gradient(160deg,#FFE3EE,#FFFFFF)', bg_sea:'linear-gradient(160deg,#D9F0FA,#EAF9FF)', bg_night:'linear-gradient(160deg,#3A3F63,#565B86)', bg_rainbow:'linear-gradient(160deg,#FFE3EC,#E7F0FF,#E3FBE9)' };
 function itemEmoji(id){ const it=ITEMS.find(x=>x.id===id); return it?it.emoji:''; }
-function amyHTML(){ const o=amyOutfit||{}; let h='<span class="afox">🦊</span>';
+function buddyEmoji(){ return (P&&P.emoji)||'🦊'; }   // 대화·꾸미기 대상 = 고른 캐릭터
+function amyHTML(){ const o=amyOutfit||{}; let h=`<span class="afox">${buddyEmoji()}</span>`;
   if(o.hat) h+=`<span class="acc hat">${itemEmoji(o.hat)}</span>`;
   if(o.face) h+=`<span class="acc face">${itemEmoji(o.face)}</span>`;
   if(o.neck) h+=`<span class="acc neck">${itemEmoji(o.neck)}</span>`;
