@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>잉글리시 버디 · 영어 말하기 스터디</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --sky:#E8F3FB; --sky2:#F3F9FD; --cloud:#FFFFFF;
+    --fox:#F08A5D; --fox-soft:#FDE7DC;
+    --sun:#FFC94B; --sun-soft:#FFF2CF;
+    --grass:#5FA97C; --grass-soft:#E2F1E7;
+    --amber:#C77A3C; --amber-soft:#FBEBD9;
+    --ink:#3A3A4A; --sub:#8C8CA1; --line:#E9EFF5;
+    --me:#FFD37E; --blue:#5B87C7;
+  }
+  html,body{ height:100%; }
+  body{ font-family:'Nunito',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--sky); color:var(--ink); display:flex; justify-content:center; }
+  .display{ font-family:'Baloo 2','Nunito',sans-serif; }
+  .app{ width:100%; max-width:540px; height:100dvh; display:flex; flex-direction:column; background:var(--sky); position:relative; overflow:hidden; }
+
+  header{ padding:11px 14px; display:flex; align-items:center; gap:10px; background:var(--cloud); border-bottom:1px solid var(--line); }
+  .avatar{ width:44px; height:44px; border-radius:50%; background:var(--fox-soft); display:grid; place-items:center; font-size:24px; flex:0 0 auto; cursor:pointer; box-shadow:0 3px 0 rgba(240,138,93,.2); }
+  .htxt h1{ font-size:17px; font-weight:800; letter-spacing:-.2px; display:flex; align-items:center; gap:5px; }
+  .htxt .sw{ font-size:11px; color:var(--fox); font-weight:800; cursor:pointer; }
+  .htxt p{ font-size:11px; color:var(--sub); margin-top:1px; font-weight:600; }
+  .level-badge{ margin-left:auto; background:var(--grass-soft); color:var(--grass); border-radius:999px; padding:6px 11px; font-size:12px; font-weight:800; white-space:nowrap; }
+
+  .tabs{ display:flex; background:var(--cloud); border-top:1px solid var(--line); padding:6px 6px calc(6px + env(safe-area-inset-bottom)); gap:2px; }
+  .tab{ flex:1; border:none; background:none; color:var(--sub); border-radius:13px; padding:7px 2px; font-size:10.5px; font-weight:800; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; font-family:inherit; }
+  .tab .ic{ font-size:19px; }
+  .tab.on{ color:var(--fox); background:var(--fox-soft); }
+
+  .view{ flex:1; overflow-y:auto; display:none; flex-direction:column; }
+  .view.on{ display:flex; }
+
+  /* starter */
+  .starter{ margin:12px 14px 2px; background:linear-gradient(135deg,var(--sun-soft),#fff); border:2px solid var(--sun); border-radius:20px; padding:14px 15px; }
+  .starter .cap{ font-size:11px; font-weight:800; color:var(--amber); letter-spacing:.4px; }
+  .starter .q{ font-family:'Baloo 2',sans-serif; font-size:19px; font-weight:700; margin:6px 0 3px; line-height:1.3; }
+  .starter .qk{ font-size:12.5px; color:var(--sub); font-weight:600; }
+  .starter .row{ display:flex; gap:8px; margin-top:10px; }
+  .starter .row button{ border:none; border-radius:12px; padding:8px 12px; font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; }
+  .b-hear{ background:var(--sun); color:#6b4b12; } .b-new{ background:#fff; color:var(--amber); border:1.5px solid var(--sun) !important; }
+
+  .chat{ flex:1; padding:13px 13px 6px; display:flex; flex-direction:column; gap:12px; }
+  .row{ display:flex; gap:8px; align-items:flex-end; max-width:90%; }
+  .row.me{ align-self:flex-end; flex-direction:row-reverse; }
+  .mini{ width:29px; height:29px; border-radius:50%; display:grid; place-items:center; font-size:15px; flex:0 0 auto; }
+  .mini.amy{ background:var(--fox-soft); } .mini.me{ background:var(--sun-soft); }
+  .bubble{ padding:11px 14px; border-radius:19px; font-size:15px; line-height:1.5; font-weight:600; }
+  .amy .bubble{ background:var(--cloud); border-bottom-left-radius:5px; box-shadow:0 1px 4px rgba(80,100,130,.06); }
+  .me .bubble{ background:var(--me); color:#5a410f; border-bottom-right-radius:5px; }
+  .kr{ display:block; margin-top:6px; font-size:12.5px; color:var(--sub); font-weight:600; }
+  .fix{ margin-top:7px; font-size:12.5px; background:var(--amber-soft); color:var(--amber); border-radius:11px; padding:7px 10px; line-height:1.45; font-weight:700; }
+  .amybtns{ margin-top:7px; display:flex; gap:12px; }
+  .amybtns span{ font-size:11px; font-weight:800; cursor:pointer; user-select:none; }
+  .s-hear{ color:var(--fox); } .s-say{ color:var(--grass); }
+  .typing .bubble{ color:var(--sub); }
+  .dot{ display:inline-block; animation:blink 1.2s infinite; } .dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
+
+  .finish-wrap{ padding:4px 14px 10px; }
+  .finish{ width:100%; border:none; background:var(--grass); color:#fff; border-radius:16px; padding:13px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; box-shadow:0 4px 0 rgba(95,169,124,.35); }
+  .finish:active{ transform:translateY(2px); box-shadow:none; } .finish:disabled{ opacity:.5; box-shadow:none; }
+
+  .composer{ padding:9px 12px calc(9px + env(safe-area-inset-bottom)); background:var(--cloud); border-top:1px solid var(--line); }
+  .crow{ display:flex; align-items:center; gap:8px; }
+  #txt{ flex:1; border:2px solid var(--line); border-radius:22px; padding:11px 15px; font-size:15px; outline:none; background:#fff; color:var(--ink); font-family:inherit; font-weight:600; }
+  #txt:focus{ border-color:var(--fox); }
+  .btn{ border:none; border-radius:50%; width:46px; height:46px; flex:0 0 auto; cursor:pointer; font-size:20px; display:grid; place-items:center; }
+  .mic{ background:var(--fox); color:#fff; box-shadow:0 4px 0 rgba(240,138,93,.35); }
+  .mic.rec{ background:#E0483C; animation:pulse 1s infinite; }
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(224,72,60,.5)}100%{box-shadow:0 0 0 14px rgba(224,72,60,0)}}
+  .send{ background:var(--grass); color:#fff; box-shadow:0 4px 0 rgba(95,169,124,.35); }
+  .btn:active{ transform:translateY(2px); box-shadow:none; }
+  .hint{ text-align:center; font-size:11px; color:var(--sub); margin-top:6px; font-weight:600; }
+  .convo{ width:100%; border:2px solid var(--grass); background:var(--grass-soft); color:var(--grass); border-radius:16px; padding:10px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; margin-bottom:9px; }
+  .convo.on{ background:var(--grass); color:#fff; border-color:var(--grass); animation:live 1.6s infinite; }
+  @keyframes live{ 0%,100%{ box-shadow:0 0 0 0 rgba(95,169,124,.45);} 50%{ box-shadow:0 0 0 8px rgba(95,169,124,0);} }
+
+  /* reports */
+  .report{ padding:15px 15px 26px; }
+  .empty{ margin:44px 24px; text-align:center; color:var(--sub); }
+  .empty .e{ font-size:44px; } .empty h3{ font-size:16px; color:var(--ink); margin:10px 0 5px; font-weight:800; } .empty p{ font-size:13px; font-weight:600; line-height:1.6; }
+  .empty button{ margin-top:16px; border:none; background:var(--fox); color:#fff; border-radius:14px; padding:12px 22px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; box-shadow:0 4px 0 rgba(240,138,93,.35); }
+  .rhead{ display:flex; align-items:center; gap:10px; margin-bottom:13px; }
+  .rhead .r-emoji{ font-size:29px; } .rhead h2{ font-size:19px; font-weight:800; } .rhead .date{ font-size:12px; color:var(--sub); font-weight:700; }
+  .card{ background:var(--cloud); border-radius:18px; padding:14px 15px; margin-bottom:11px; box-shadow:0 1px 5px rgba(80,100,130,.05); }
+  .card .lbl{ font-size:12px; font-weight:800; letter-spacing:.3px; color:var(--fox); margin-bottom:8px; }
+  .card.g .lbl{ color:var(--grass); } .card.a .lbl{ color:var(--amber); } .card.b .lbl{ color:var(--blue); }
+  .card p{ font-size:14px; line-height:1.6; font-weight:600; }
+  .card ul{ list-style:none; display:flex; flex-direction:column; gap:8px; }
+  .card li{ font-size:14px; line-height:1.5; font-weight:600; padding-left:21px; position:relative; }
+  .card li::before{ content:"✔"; position:absolute; left:0; color:var(--grass); font-weight:800; }
+  .card.a li::before{ content:"→"; color:var(--amber); }
+  .level-line{ background:var(--grass-soft); color:var(--grass); border-radius:14px; padding:10px 14px; font-size:15px; font-weight:800; text-align:center; margin-bottom:11px; }
+  .fixcard{ border-left:4px solid var(--amber); }
+  .fixcard .said{ font-size:14px; font-weight:700; color:var(--sub); text-decoration:line-through; }
+  .fixcard .better{ font-size:15px; font-weight:800; color:var(--ink); margin:4px 0; }
+  .fixcard .why{ font-size:12.5px; color:var(--amber); font-weight:700; }
+  .vocab .w{ padding:10px 2px; border-bottom:1px dashed var(--line); } .vocab .w:last-child{ border-bottom:none; }
+  .vocab .word{ font-family:'Baloo 2',sans-serif; font-size:17px; font-weight:700; color:var(--fox); }
+  .vocab .mean{ font-size:14px; font-weight:700; margin-top:1px; }
+  .vocab .ex{ font-size:12.5px; color:var(--sub); font-weight:600; margin-top:3px; font-style:italic; }
+  .praise{ background:linear-gradient(135deg,var(--sun-soft),#fff); border:2px solid var(--sun); border-radius:18px; padding:15px; text-align:center; margin-bottom:13px; }
+  .praise .p1{ font-size:32px; } .praise .p2{ font-size:16px; font-weight:800; margin-top:5px; line-height:1.5; }
+  .pron-sum{ display:flex; gap:10px; align-items:center; }
+  .pron-score{ font-family:'Baloo 2',sans-serif; font-size:30px; font-weight:800; color:var(--grass); }
+  .pron-stars{ font-size:17px; letter-spacing:1px; }
+  .toolbar{ display:flex; justify-content:flex-end; gap:6px; margin-bottom:9px; }
+  .toolbar button{ border:1.5px solid var(--line); background:#fff; color:var(--sub); border-radius:12px; padding:7px 12px; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit; }
+
+  /* history */
+  .hitem{ background:var(--cloud); border-radius:16px; padding:13px 15px; margin-bottom:10px; display:flex; align-items:center; gap:12px; cursor:pointer; box-shadow:0 1px 5px rgba(80,100,130,.05); }
+  .hitem .hdate{ font-weight:800; font-size:15px; } .hitem .hsub{ font-size:12px; color:var(--sub); font-weight:700; margin-top:2px; }
+  .hitem .hlv{ margin-left:auto; background:var(--grass-soft); color:var(--grass); border-radius:999px; padding:5px 10px; font-size:11.5px; font-weight:800; white-space:nowrap; }
+  .hitem .hdel{ font-size:16px; padding:4px; }
+
+  /* overlays */
+  .overlay{ position:absolute; inset:0; background:rgba(40,50,70,.45); display:none; align-items:flex-end; justify-content:center; z-index:50; }
+  .overlay.on{ display:flex; }
+  .sheet{ background:var(--sky2); width:100%; max-height:90%; border-radius:24px 24px 0 0; overflow-y:auto; padding:18px 18px calc(20px + env(safe-area-inset-bottom)); }
+  .sheet h3{ font-size:18px; font-weight:800; margin-bottom:3px; } .sheet .sh-sub{ font-size:12.5px; color:var(--sub); font-weight:600; margin-bottom:14px; }
+  .prof-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+  .prof{ background:#fff; border:2px solid var(--line); border-radius:16px; padding:11px 13px; display:flex; align-items:center; gap:11px; cursor:pointer; }
+  .prof.active{ border-color:var(--fox); background:var(--fox-soft); }
+  .prof .pe{ font-size:24px; } .prof .pn{ font-weight:800; font-size:15px; } .prof .pl{ font-size:11.5px; color:var(--sub); font-weight:700; }
+  .prof .pdel{ margin-left:auto; font-size:15px; opacity:.5; padding:4px; }
+  .divider{ text-align:center; font-size:12px; font-weight:800; color:var(--sub); margin:6px 0 12px; }
+  .emoji-grid{ display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin:8px 0 12px; }
+  .emoji-grid button{ border:2px solid var(--line); background:#fff; border-radius:12px; padding:6px 0; font-size:20px; cursor:pointer; }
+  .emoji-grid button.sel{ border-color:var(--fox); background:var(--fox-soft); }
+  .sheet input{ width:100%; border:2px solid var(--line); border-radius:14px; padding:12px 14px; font-size:15px; outline:none; font-family:inherit; }
+  .sheet input:focus{ border-color:var(--fox); }
+  .sheet .primary{ width:100%; margin-top:10px; border:none; background:var(--fox); color:#fff; border-radius:14px; padding:13px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; box-shadow:0 4px 0 rgba(240,138,93,.35); }
+  .sheet .ghost{ width:100%; margin-top:8px; border:1.5px solid var(--line); background:#fff; color:var(--sub); border-radius:14px; padding:11px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; }
+
+  /* pron modal */
+  .pcenter{ align-items:center; }
+  .pmodal{ background:#fff; width:86%; max-width:360px; border-radius:24px; padding:22px 20px; text-align:center; }
+  .pmodal .pbig{ font-size:44px; } .pmodal h3{ font-size:18px; font-weight:800; margin:8px 0 4px; }
+  .pmodal .ptarget{ font-family:'Baloo 2',sans-serif; font-size:16px; font-weight:700; color:var(--ink); background:var(--sky); border-radius:12px; padding:9px; margin:10px 0; }
+  .pmodal .pstars{ font-size:30px; letter-spacing:2px; margin:6px 0; }
+  .pmodal .pscore{ font-family:'Baloo 2',sans-serif; font-size:38px; font-weight:800; }
+  .pmodal .pweak{ font-size:13px; color:var(--amber); font-weight:800; margin-top:6px; line-height:1.5; }
+  .pmodal .prow{ display:flex; gap:8px; margin-top:16px; }
+  .pmodal .prow button{ flex:1; border:none; border-radius:14px; padding:12px; font-size:14px; font-weight:800; cursor:pointer; font-family:inherit; }
+  .p-retry{ background:var(--sun); color:#6b4b12; } .p-ok{ background:var(--grass); color:#fff; }
+  .listening .pbig{ animation:pulse2 1s infinite; }
+  @keyframes pulse2{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; } }
+
+  /* 레벨업 축하 */
+  .levelup{ position:absolute; inset:0; z-index:60; display:none; align-items:center; justify-content:center; background:rgba(40,50,70,.35); }
+  .levelup.on{ display:flex; }
+  .lu-card{ background:#fff; border-radius:26px; padding:30px 34px; text-align:center; box-shadow:0 12px 40px rgba(40,50,70,.25); animation:pop .5s cubic-bezier(.2,1.3,.5,1); }
+  @keyframes pop{ 0%{transform:scale(.5);opacity:0} 100%{transform:scale(1);opacity:1} }
+  .lu-badge{ font-size:64px; animation:bounce 1s ease infinite; } @keyframes bounce{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  .lu-title{ font-family:'Baloo 2',sans-serif; font-size:26px; font-weight:800; color:var(--fox); margin-top:6px; }
+  .lu-sub{ font-size:16px; font-weight:800; margin-top:4px; }
+  .lu-sub b{ color:var(--grass); }
+  .confetti{ position:absolute; top:-12px; width:9px; height:14px; border-radius:2px; animation:fall linear forwards; }
+  @keyframes fall{ 0%{transform:translateY(-20px) rotate(0)} 100%{transform:translateY(105vh) rotate(540deg); opacity:.9} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="avatar" id="hAvatar">🦊</div>
+    <div class="htxt">
+      <h1 class="display"><span id="hName">잉글리시 버디</span> <span class="sw" id="hSwitch">전환 ▾</span></h1>
+      <p>Amy와 함께하는 영어 말하기</p>
+    </div>
+    <div class="level-badge" id="levelBadge">🌱 Lv.1</div>
+  </header>
+
+  <!-- 대화 -->
+  <section class="view on" id="v-chat">
+    <div class="starter" id="starter">
+      <div class="cap">🎲 오늘의 질문 · Amy가 물어봐요</div>
+      <div class="q" id="stQ">—</div>
+      <div class="qk" id="stK"></div>
+      <div class="row">
+        <button class="b-hear" id="stHear">🔊 듣기</button>
+        <button class="b-new" id="stNew">🎲 다른 질문</button>
+      </div>
+    </div>
+    <div class="chat" id="chat"></div>
+    <div class="finish-wrap" id="finishWrap" style="display:none;">
+      <button class="finish" id="btnFinish">📋 오늘 회화 정리하고 보고서 만들기</button>
+    </div>
+    <div class="composer">
+      <button class="convo" id="convoBtn">▶️ 계속 대화하기 (핸즈프리)</button>
+      <div class="crow">
+        <button class="btn mic" id="mic" aria-label="말하기">🎤</button>
+        <input id="txt" placeholder="영어로 말하거나 써보세요!" autocomplete="off">
+        <button class="btn send" id="send" aria-label="보내기">➤</button>
+      </div>
+      <div class="hint" id="hint">🎤 버튼을 누르고 영어로 대답해보세요</div>
+    </div>
+  </section>
+
+  <section class="view" id="v-parent"><div id="parentBody"></div></section>
+  <section class="view" id="v-student"><div id="studentBody"></div></section>
+  <section class="view" id="v-history"><div id="historyBody"></div></section>
+
+  <nav class="tabs">
+    <button class="tab on" data-v="chat"><span class="ic">💬</span>대화</button>
+    <button class="tab" data-v="parent"><span class="ic">👨‍👩‍👧</span>부모</button>
+    <button class="tab" data-v="student"><span class="ic">🎒</span>학생</button>
+    <button class="tab" data-v="history"><span class="ic">📅</span>기록</button>
+  </nav>
+
+  <!-- 프로필 시트 -->
+  <div class="overlay" id="profileSheet">
+    <div class="sheet">
+      <h3 id="psTitle">👋 학생을 골라주세요</h3>
+      <div class="sh-sub">여러 명을 등록하고 언제든 전환할 수 있어요.</div>
+      <div class="prof-list" id="profList"></div>
+      <div class="divider" id="addDivider">➕ 새 학생 추가</div>
+      <div class="emoji-grid" id="emojiGrid"></div>
+      <input id="newName" placeholder="이름 (예: 서연)" maxlength="12">
+      <button class="primary" id="addBtn">추가하고 시작하기</button>
+      <button class="ghost" id="closeSheet" style="display:none;">닫기</button>
+    </div>
+  </div>
+
+  <!-- 발음 모달 -->
+  <div class="overlay pcenter" id="pronModal"><div class="pmodal" id="pmodalBody"></div></div>
+
+  <!-- 기록 상세 -->
+  <div class="overlay" id="histDetail"><div class="sheet" id="histDetailBody"></div></div>
+
+  <!-- 레벨업 축하 -->
+  <div class="levelup" id="levelup"><div class="lu-card"><div class="lu-badge" id="luBadge">🌿</div><div class="lu-title">LEVEL UP!</div><div class="lu-sub" id="luSub"></div></div></div>
+</div>
+
+<script>
+/* ============ 저장소 (영구 저장 + 세션 폴백) ============ */
+const _mem={};
+const store={
+  async get(k){ try{ if(window.storage){ const r=await window.storage.get(k,false); return (r&&r.value!=null)?JSON.parse(r.value):(k in _mem?_mem[k]:null);} }catch(e){} return (k in _mem)?_mem[k]:null; },
+  async set(k,v){ _mem[k]=v; try{ if(window.storage){ await window.storage.set(k,JSON.stringify(v),false);} }catch(e){} },
+  async del(k){ delete _mem[k]; try{ if(window.storage){ await window.storage.delete(k,false);} }catch(e){} },
+  async list(p){ try{ if(window.storage){ const r=await window.storage.list(p,false); if(r&&r.keys) return r.keys; } }catch(e){} return Object.keys(_mem).filter(k=>k.startsWith(p)); }
+};
+
+/* ============ 상태 ============ */
+let profiles=[], activeId=null, P=null;
+let childName="친구";
+let apiMessages=[], sessionLog=[], liveVocab={}, pronScores=[];
+let levelEMA=1.6, turnCount=0, pendingStarter=null, reportsData=null;
+let enVoice=null, voiceOn=true;
+let recMode='chat', pronTarget='';
+let continuousMode=false, amySpeaking=false, recording=false, awaitingReply=false;
+
+const LEVELS=[{e:"🌱",label:"씨앗"},{e:"🌿",label:"새싹"},{e:"🌳",label:"나무"},{e:"🌸",label:"꽃"},{e:"⭐",label:"별"}];
+function levelInfo(n){ const i=Math.max(0,Math.min(4,Math.round(n)-1)); return {n:i+1,e:LEVELS[i].e,label:LEVELS[i].label}; }
+function updateBadge(){ const L=levelInfo(levelEMA); document.getElementById('levelBadge').textContent=`${L.e} Lv.${L.n}·${L.label}`; }
+function chime(){ try{ const ac=new (window.AudioContext||window.webkitAudioContext)(); const notes=[523,659,784,1047]; notes.forEach((f,i)=>{ const o=ac.createOscillator(),g=ac.createGain(); o.type='triangle'; o.frequency.value=f; o.connect(g); g.connect(ac.destination); const t=ac.currentTime+i*0.12; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.25,t+0.03); g.gain.exponentialRampToValueAtTime(0.001,t+0.35); o.start(t); o.stop(t+0.36); }); }catch(e){} }
+function celebrateLevelUp(n){
+  const L=levelInfo(n), lu=document.getElementById('levelup');
+  document.getElementById('luBadge').textContent=L.e;
+  document.getElementById('luSub').innerHTML=`<b>Lv.${L.n} · ${L.label}</b> 단계가 됐어요!`;
+  const colors=['#F08A5D','#FFC94B','#5FA97C','#5B87C7','#C77A3C'];
+  for(let i=0;i<26;i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=(Math.random()*100)+'%'; c.style.background=colors[i%colors.length]; c.style.animationDuration=(1.6+Math.random()*1.2)+'s'; c.style.animationDelay=(Math.random()*0.3)+'s'; lu.appendChild(c); setTimeout(()=>c.remove(),3200); }
+  lu.classList.add('on'); chime();
+  setTimeout(()=>lu.classList.remove('on'),2600);
+}
+document.addEventListener('click',e=>{ const lu=document.getElementById('levelup'); if(lu.classList.contains('on')&&e.target.closest('.levelup')) lu.classList.remove('on'); });
+
+/* ============ 시작 질문 ============ */
+const STARTERS={
+  easy:[["What is your favorite animal?","가장 좋아하는 동물이 뭐야?"],["Do you like ice cream?","아이스크림 좋아해?"],["What color do you like the most?","어떤 색을 제일 좋아해?"],["Do you have a pet?","반려동물 키워?"],["What is your favorite fruit?","가장 좋아하는 과일이 뭐야?"],["Do you like rainy days or sunny days?","비 오는 날이 좋아, 맑은 날이 좋아?"],["What is your favorite food?","가장 좋아하는 음식이 뭐야?"],["How are you today?","오늘 기분 어때?"]],
+  mid:[["What did you do today?","오늘 뭐 했어?"],["What is your favorite subject at school?","학교에서 가장 좋아하는 과목이 뭐야?"],["Tell me about your best friend.","가장 친한 친구에 대해 말해줄래?"],["What do you like to do on weekends?","주말에 뭐 하는 걸 좋아해?"],["What is your favorite season? Why?","가장 좋아하는 계절이 뭐야? 왜?"],["What game do you like to play?","어떤 게임 하는 걸 좋아해?"]],
+  high:[["If you could have any superpower, what would it be?","초능력을 가질 수 있다면 뭘 갖고 싶어?"],["What do you want to be when you grow up?","커서 뭐가 되고 싶어?"],["Tell me about a fun place you visited.","재미있게 다녀온 곳에 대해 말해줄래?"],["What makes you really happy?","뭐가 널 정말 행복하게 해?"],["If you could travel anywhere, where would you go?","어디든 갈 수 있다면 어디로 가고 싶어?"]]
+};
+function starterBucket(){ const n=Math.round(levelEMA); return n<=2?"easy":(n===3?"mid":"high"); }
+function newStarter(){ const pool=STARTERS[starterBucket()]; const p=pool[Math.floor(Math.random()*pool.length)]; pendingStarter=p[0]; document.getElementById('stQ').textContent=p[0]; document.getElementById('stK').textContent=p[1]; }
+
+/* ============ 음성 ============ */
+function pickVoice(){ const vs=speechSynthesis.getVoices(); enVoice=vs.find(v=>/en-US/i.test(v.lang)&&/female|samantha|zira|google us/i.test(v.name))||vs.find(v=>/en-US/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang))||null; }
+speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
+function speakRate(){ return [0.72,0.8,0.88,0.95,1.0][levelInfo(levelEMA).n-1]; }
+function speak(t,fromAmy){
+  if(!voiceOn||!t){ if(fromAmy) afterAmy(); return; }
+  speechSynthesis.cancel();
+  try{ if(recording&&recog) recog.stop(); }catch(e){}   // 에코 방지: Amy 말하는 동안 마이크 정지
+  const u=new SpeechSynthesisUtterance(t); u.lang='en-US'; u.rate=speakRate(); u.pitch=1.12; if(enVoice)u.voice=enVoice;
+  if(fromAmy){ amySpeaking=true; u.onend=()=>{ amySpeaking=false; afterAmy(); }; u.onerror=()=>{ amySpeaking=false; afterAmy(); }; }
+  speechSynthesis.speak(u);
+}
+function afterAmy(){ if(continuousMode && recMode==='chat' && !awaitingReply) startListen(); }
+
+/* ============ 채팅 렌더 ============ */
+const chat=document.getElementById('chat'), txt=document.getElementById('txt'), hint=document.getElementById('hint');
+function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function scrollDown(){ chat.scrollTop=chat.scrollHeight; }
+function addMe(t){ const r=document.createElement('div'); r.className='row me'; r.innerHTML=`<div class="mini me">🧒</div><div class="bubble">${esc(t)}</div>`; chat.appendChild(r); scrollDown(); }
+function addAmy(reply,kr,fix){
+  const r=document.createElement('div'); r.className='row amy';
+  let h=`<div class="mini amy">🦊</div><div class="bubble">${esc(reply)}`;
+  if(kr) h+=`<span class="kr">${esc(kr)}</span>`;
+  if(fix) h+=`<div class="fix">💡 ${esc(fix)}</div>`;
+  h+=`<div class="amybtns"><span class="s-hear">🔊 다시 듣기</span><span class="s-say">🎙️ 따라 말하기</span></div></div>`;
+  r.innerHTML=h;
+  r.querySelector('.s-hear').onclick=()=>speak(reply);
+  r.querySelector('.s-say').onclick=()=>startPron(reply);
+  chat.appendChild(r); scrollDown(); speak(reply,true);
+}
+function addTyping(){ const r=document.createElement('div'); r.className='row amy typing'; r.id='typing'; r.innerHTML=`<div class="mini amy">🦊</div><div class="bubble"><span class="dot">●</span><span class="dot">●</span><span class="dot">●</span></div>`; chat.appendChild(r); scrollDown(); }
+function rmTyping(){ const t=document.getElementById('typing'); if(t)t.remove(); }
+
+/* ============ 한 턴 대화 ============ */
+async function talk(userText){
+  awaitingReply=true;
+  addMe(userText); apiMessages.push({role:'user',content:userText}); turnCount++; addTyping();
+  const target=levelInfo(levelEMA).n, stretch=(turnCount%4===0);
+  const askedNote=pendingStarter?`You just asked her: "${pendingStarter}". She is answering it.`:"";
+  const system=`You are Amy, a warm, patient, cheerful English tutor (a friendly fox) for a 10-year-old Korean girl named ${childName}. This is a speaking practice study.
+${askedNote}
+Her current level is about ${target} out of 5 (1=absolute beginner, 5=fluent kid).
+STYLE:
+- Speak in SIMPLE, SHORT English, only 1-2 short sentences. Match difficulty to level ${target}.
+- Always warm and encouraging; use her name sometimes.
+- ALWAYS end with ONE easy, fun follow-up question so the chat keeps going.
+${stretch?'- CHALLENGE: this turn, gently include ONE slightly harder word or a bit longer sentence to help her grow, kept understandable.':''}
+- If she made a mistake, model the correct sentence gently.
+FULL-SENTENCE COACHING (important):
+- If she answered with only ONE word or a short fragment (e.g. "Blue.", "Dog", "Yes"), FIRST praise it, THEN show her how to say it as a FULL sentence and invite her to try, e.g. "Nice! You can also say: 'My favorite color is blue.' Can you say the whole sentence?".
+- Model complete sentences with subject + verb. Keep encouraging her to speak in full sentences, but never scold. For very low level (1), one short full sentence is enough.
+- When she DOES answer in a full sentence, praise that effort specifically ("Great full sentence, ${childName}!").
+Return ONLY a JSON object (no markdown) with keys:
+"reply": your English response (1-2 short sentences, ends with a question),
+"korean": natural Korean translation of your reply,
+"correction": if she made a grammar/word mistake OR answered with only a word/fragment, ONE short gentle Korean tip. For fragments, show the full English sentence she could say (e.g. "‘Blue’보다 ‘My favorite color is blue.’처럼 문장으로 말해봐요"); else "",
+"level": integer 1-5 estimate of HER level from her message,
+"vocab": array (0-2) of words YOU used a beginner might not know, each {"word":"...","kr":"짧은 뜻"}; else [].`;
+  try{
+    const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:1000,system,messages:apiMessages})});
+    const data=await res.json();
+    const raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    let obj; try{ obj=JSON.parse(raw.replace(/```json|```/g,'').trim()); }catch(e){ obj={reply:raw||"Let's try again!",korean:"",correction:"",level:target,vocab:[]}; }
+    rmTyping(); addAmy(obj.reply,obj.korean,obj.correction);
+    apiMessages.push({role:'assistant',content:obj.reply});
+    sessionLog.push({child:userText,amy:obj.reply,correction:obj.correction||""});
+    (obj.vocab||[]).forEach(v=>{ if(v&&v.word) liveVocab[v.word.toLowerCase()]={kr:v.kr||"",word:v.word}; });
+    if(typeof obj.level==='number'){ const prev=levelInfo(levelEMA).n; levelEMA=levelEMA*0.6+obj.level*0.4; const now=levelInfo(levelEMA).n; updateBadge(); if(P){P.level=levelEMA; saveProfiles();} if(now>prev) celebrateLevelUp(now); }
+    pendingStarter=null; document.getElementById('starter').style.display='none';
+    if(turnCount>=3) document.getElementById('finishWrap').style.display='block';
+    reportsData=null;
+  }catch(err){ rmTyping(); addAmy("Oops! Let's try that again.","앗! 다시 해볼까?",""); }
+  awaitingReply=false;
+  if(continuousMode && !voiceOn) afterAmy(); // 소리끄면 TTS onend가 없으니 여기서 재개
+}
+function submit(){ const v=txt.value.trim(); if(!v)return; txt.value=''; talk(v); }
+document.getElementById('send').onclick=submit;
+txt.addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
+document.getElementById('stHear').onclick=()=>speak(document.getElementById('stQ').textContent);
+document.getElementById('stNew').onclick=()=>{ newStarter(); speak(document.getElementById('stQ').textContent); };
+
+/* ============ 발음 채점 (따라 말하기) ============ */
+const STOP=new Set(['a','an','the','to','is','are','it','of','in','on','and','you','i','do','my','me','so','too','very']);
+function lev(a,b){ const m=[]; for(let i=0;i<=b.length;i++)m[i]=[i]; for(let j=0;j<=a.length;j++)m[0][j]=j; for(let i=1;i<=b.length;i++)for(let j=1;j<=a.length;j++)m[i][j]=b[i-1]===a[j-1]?m[i-1][j-1]:Math.min(m[i-1][j-1]+1,m[i][j-1]+1,m[i-1][j]+1); return m[b.length][a.length]; }
+function sim(a,b){ if(a===b)return 1; const L=Math.max(a.length,b.length); return L?1-lev(a,b)/L:0; }
+function tok(s){ return s.toLowerCase().replace(/[^a-z0-9' ]/g,'').split(/\s+/).filter(Boolean); }
+function scorePron(target,heard){
+  const tw=tok(target), hw=tok(heard); let sum=0, weak=[];
+  tw.forEach(w=>{ let best=0; hw.forEach(h=>best=Math.max(best,sim(w,h))); sum+=best; if(best<0.72 && !STOP.has(w) && w.length>2) weak.push(w); });
+  const score=Math.round((sum/Math.max(1,tw.length))*100);
+  return {score,weak:[...new Set(weak)].slice(0,4),stars:score>=90?5:score>=75?4:score>=60?3:score>=40?2:1};
+}
+function startPron(sentence){
+  if(!SR){ alert("이 브라우저는 음성인식을 지원하지 않아요. Chrome/웨일에서 열어주세요!"); return; }
+  pronTarget=sentence; speechSynthesis.cancel();
+  try{ if(recording){ recog.abort(); recording=false; mic.classList.remove('rec'); } }catch(e){}
+  recMode='pron';
+  document.getElementById('pmodalBody').className='';
+  document.getElementById('pmodalBody').innerHTML=`<div class="listening"><div class="pbig">🎙️</div><h3>따라 말해보세요!</h3><div class="ptarget">${esc(sentence)}</div><p style="color:var(--sub);font-weight:700">🔴 듣고 있어요...</p></div>`;
+  document.getElementById('pronModal').classList.add('on');
+  setTimeout(()=>{ try{ recog.start(); }catch(e){} },250);
+}
+function showPronResult(heard){
+  const r=scorePron(pronTarget,heard);
+  pronScores.push({sentence:pronTarget,score:r.score,weak:r.weak});
+  const stars='⭐'.repeat(r.stars)+'☆'.repeat(5-r.stars);
+  const msg=r.score>=90?"완벽해요! 🎉":r.score>=75?"아주 잘했어요! 👏":r.score>=60?"좋아요! 조금만 더 🙂":"좋은 시도예요! 다시 해볼까? 💪";
+  const weak=r.weak.length?`<div class="pweak">🔍 더 연습할 단어: ${r.weak.map(esc).join(', ')}</div>`:`<div class="pweak" style="color:var(--grass)">모든 단어 또렷했어요! ✨</div>`;
+  document.getElementById('pmodalBody').innerHTML=`<div class="pbig">${r.score>=75?'🌟':'🦊'}</div><h3>${msg}</h3>
+    <div class="pstars">${stars}</div><div class="pscore" style="color:${r.score>=60?'var(--grass)':'var(--amber)'}">${r.score}점</div>
+    <div class="ptarget">${esc(pronTarget)}</div>${weak}
+    <div class="prow"><button class="p-retry" id="pRetry">🔁 다시</button><button class="p-ok" id="pOk">확인</button></div>`;
+  document.getElementById('pRetry').onclick=()=>startPron(pronTarget);
+  document.getElementById('pOk').onclick=()=>{ document.getElementById('pronModal').classList.remove('on'); resumeIfContinuous(); };
+}
+
+/* ============ 탭 ============ */
+document.querySelectorAll('.tab').forEach(t=>{ t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on'); const v=t.dataset.v; document.getElementById('v-'+v).classList.add('on');
+  if(v!=='chat' && continuousMode){ continuousMode=false; const cb=document.getElementById('convoBtn'); cb.classList.remove('on'); cb.textContent='▶️ 계속 대화하기 (핸즈프리)'; try{ if(recog) recog.abort(); }catch(e){} recording=false; mic.classList.remove('rec'); speechSynthesis.cancel(); }
+  if(v==='parent') renderParent(); if(v==='student') renderStudent(); if(v==='history') renderHistory();
+}; });
+
+/* ============ 보고서 생성/저장 ============ */
+document.getElementById('btnFinish').onclick=()=>generateReports(true);
+function pronSummary(){ if(!pronScores.length) return null; const avg=Math.round(pronScores.reduce((a,b)=>a+b.score,0)/pronScores.length); const weak=[...new Set(pronScores.flatMap(p=>p.weak))].slice(0,6); return {avg,weak,count:pronScores.length}; }
+
+async function generateReports(goToTab){
+  if(sessionLog.length<2){ alert("조금 더 대화한 뒤에 정리해요! 🦊"); return; }
+  const btn=document.getElementById('btnFinish'); btn.disabled=true; btn.textContent="📋 보고서 만드는 중...";
+  const transcript=sessionLog.map((t,i)=>`(${i+1}) ${childName}: ${t.child}\n    Amy: ${t.amy}`).join("\n");
+  const ps=pronSummary();
+  const pronNote=ps?`Pronunciation practice: average ${ps.avg}/100 over ${ps.count} tries; words to work on: ${ps.weak.join(', ')||'none'}.`:"No pronunciation practice this session.";
+  const system=`You are an English tutor writing a report about a 10-year-old Korean child (${childName})'s English speaking practice today. Use the transcript. Be warm, specific, encouraging. Write Korean for a Korean parent and child.
+${pronNote}
+Pay attention to whether she answered in FULL SENTENCES (subject + verb) or only single words/fragments. Comment on this habit in the report, and if she often answered with just words, make "완전한 문장으로 대답하기" one of the improve points and the nextGoal.
+Return ONLY JSON (no markdown) with keys:
+"levelNum": integer 1-5,
+"levelLabel": short Korean like "Lv.2 · 새싹 단계",
+"parent": {"summary":"2-3문장 총평(한국어, 단답/완전한 문장 여부 언급)","strengths":["잘한 점 2-3"],"improve":["개선점 1-3, 부드럽게"],"attitude":"참여도/태도 한 줄","nextGoal":"다음 목표 한 줄","tip":"집에서 도울 구체 팁 한 줄"},
+"student": {"praise":"아이에게 하는 칭찬, 쉬운 한국어 한 문장","corrections":[{"said":"아이가 말한 문장/단어(영어)","better":"더 좋은 영어 문장","why":"짧은 한국어 이유"}],"vocab":[{"word":"영어단어","kr":"한국어 뜻","example":"쉬운 영어 예문"}]}
+corrections: 실수 문장뿐 아니라, 단어로만 답한 경우 그것을 완전한 문장으로 바꾼 예시도 넣어줘(최대5). vocab: 대화에서 배울 유용한 단어(최대6).`;
+  try{
+    const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-5",max_tokens:1500,system,messages:[{role:'user',content:`Transcript:\n${transcript}`}]})});
+    const data=await res.json();
+    const raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
+    reportsData=JSON.parse(raw.replace(/```json|```/g,'').trim());
+  }catch(e){
+    reportsData={levelNum:levelInfo(levelEMA).n,levelLabel:`Lv.${levelInfo(levelEMA).n} · ${levelInfo(levelEMA).label} 단계`,parent:{summary:"보고서를 만드는 중 문제가 있었어요. 다시 시도해주세요.",strengths:[],improve:[],attitude:"",nextGoal:"",tip:""},student:{praise:"오늘도 잘했어요! 🎉",corrections:sessionLog.filter(t=>t.correction).map(t=>({said:t.child,better:"",why:t.correction})),vocab:Object.values(liveVocab).map(v=>({word:v.word,kr:v.kr,example:""}))}};
+  }
+  reportsData.pron=ps;
+  await saveReport(reportsData);
+  btn.disabled=false; btn.textContent="📋 다시 정리하기 (보고서 새로고침)";
+  renderParent(); renderStudent();
+  if(goToTab) document.querySelector('.tab[data-v="student"]').click();
+}
+async function saveReport(data){
+  if(!P) return; const ts=Date.now(); const d=new Date();
+  const obj={ts,dateStr:`${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`,name:childName,levelLabel:data.levelLabel,levelNum:data.levelNum,parent:data.parent,student:data.student,pron:data.pron||null};
+  await store.set(`report:${P.id}:${ts}`,obj);
+}
+
+/* ============ 보고서 렌더 ============ */
+function today(){ const d=new Date(); return `${d.getFullYear()}년 ${d.getMonth()+1}월 ${d.getDate()}일`; }
+function emptyBlock(title,sub){ return `<div class="empty"><div class="e">📋</div><h3>${title}</h3><p>${sub}</p><button onclick='document.querySelector(".tab[data-v=chat]").click()'>대화하러 가기 💬</button></div>`; }
+function list(arr){ return (arr&&arr.length)?'<ul>'+arr.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':'<p style="color:var(--sub)">—</p>'; }
+
+function parentHTML(data,name,dateStr,withTools){
+  const p=data.parent||{};
+  let pron=''; if(data.pron) pron=`<div class="card b"><div class="lbl">🎙️ 발음 연습</div><div class="pron-sum"><div class="pron-score">${data.pron.avg}점</div><div><div class="pron-stars">${'⭐'.repeat(Math.round(data.pron.avg/20))}</div><div style="font-size:12.5px;color:var(--sub);font-weight:700">${data.pron.count}번 연습${data.pron.weak.length?' · 연습할 단어: '+data.pron.weak.map(esc).join(', '):''}</div></div></div></div>`;
+  return `${withTools?'<div class="toolbar"><button onclick="generateReports(false)">🔄 새로고침</button></div>':''}
+    <div class="rhead"><div class="r-emoji">👨‍👩‍👧</div><div><h2 class="display">부모 보고서</h2><div class="date">${dateStr} · ${esc(name)}</div></div></div>
+    <div class="level-line">${esc(data.levelLabel||'')}</div>
+    <div class="card b"><div class="lbl">📝 오늘 대화 총평</div><p>${esc(p.summary||'')}</p></div>
+    <div class="card g"><div class="lbl">🌟 잘한 점</div>${list(p.strengths)}</div>
+    <div class="card a"><div class="lbl">🌱 더 자라면 좋을 점</div>${list(p.improve)}</div>
+    ${pron}
+    <div class="card"><div class="lbl">🙋 참여도 · 태도</div><p>${esc(p.attitude||'—')}</p></div>
+    <div class="card g"><div class="lbl">🎯 다음 목표</div><p>${esc(p.nextGoal||'—')}</p></div>
+    <div class="card a"><div class="lbl">🏠 집에서 도와줄 팁</div><p>${esc(p.tip||'—')}</p></div>`;
+}
+function studentHTML(data,name,dateStr,withTools){
+  const s=data.student||{};
+  const fixes=(s.corrections&&s.corrections.length)?s.corrections.map(c=>`<div class="card fixcard"><div class="said">🙅 ${esc(c.said)}</div>${c.better?`<div class="better">🙆 ${esc(c.better)}</div>`:''}${c.why?`<div class="why">💡 ${esc(c.why)}</div>`:''}</div>`).join(''):`<div class="card"><p style="color:var(--sub)">오늘은 고칠 문장이 없었어요. 아주 잘했어요! 👏</p></div>`;
+  const vocab=(s.vocab&&s.vocab.length)?`<div class="card"><div class="lbl">📚 알아두면 좋은 단어</div><div class="vocab">${s.vocab.map(v=>`<div class="w"><div class="word">${esc(v.word)}</div><div class="mean">${esc(v.kr||'')}</div>${v.example?`<div class="ex">"${esc(v.example)}"</div>`:''}</div>`).join('')}</div></div>`:'';
+  let pron=''; if(data.pron) pron=`<div class="card"><div class="lbl">🎙️ 오늘 발음 점수</div><div class="pron-sum"><div class="pron-score">${data.pron.avg}점</div><div class="pron-stars">${'⭐'.repeat(Math.round(data.pron.avg/20))}</div></div>${data.pron.weak.length?`<p style="margin-top:8px;color:var(--amber);font-weight:800;font-size:13px">🔍 더 연습할 단어: ${data.pron.weak.map(esc).join(', ')}</p>`:''}</div>`;
+  return `${withTools?'<div class="toolbar"><button onclick="generateReports(false)">🔄 새로고침</button></div>':''}
+    <div class="rhead"><div class="r-emoji">🎒</div><div><h2 class="display">${esc(name)}의 보고서</h2><div class="date">${dateStr}</div></div></div>
+    <div class="praise"><div class="p1">🎉</div><div class="p2">${esc(s.praise||'오늘도 정말 잘했어요!')}</div></div>
+    ${pron}
+    <div class="card a" style="border:none;background:transparent;padding:0 2px 4px"><div class="lbl">✏️ 내가 말한 걸 이렇게 고쳐봐요</div></div>
+    ${fixes}${vocab}`;
+}
+function renderParent(){ const el=document.getElementById('parentBody'); if(!reportsData){ el.innerHTML=`<div class="report">${sessionLog.length<2?emptyBlock("아직 보고서가 없어요","아이와 조금 더 대화한 뒤<br>대화 탭에서 ‘회화 정리’를 눌러주세요."):emptyBlock("정리할 준비가 됐어요","대화 탭 아래 <b>‘오늘 회화 정리’</b> 버튼을<br>눌러 보고서를 만들어주세요.")}</div>`; return; } el.innerHTML=`<div class="report">${parentHTML(reportsData,childName,today(),true)}</div>`; }
+function renderStudent(){ const el=document.getElementById('studentBody'); if(!reportsData){ el.innerHTML=`<div class="report">${sessionLog.length<2?emptyBlock("아직 보고서가 없어요","Amy랑 조금 더 이야기한 다음에<br>보고서를 받아볼 수 있어요!"):emptyBlock("보고서 준비 완료!","대화 탭에서 <b>‘회화 정리’</b>를 누르면<br>오늘 배운 걸 정리해줄게요 🎉")}</div>`; return; } el.innerHTML=`<div class="report">${studentHTML(reportsData,childName,today(),true)}</div>`; }
+
+/* ============ 기록 ============ */
+async function renderHistory(){
+  const el=document.getElementById('historyBody');
+  if(!P){ el.innerHTML=`<div class="report">${emptyBlock("학생을 먼저 선택해주세요","")}</div>`; return; }
+  const keys=await store.list(`report:${P.id}:`);
+  if(!keys.length){ el.innerHTML=`<div class="report"><div class="rhead"><div class="r-emoji">📅</div><div><h2 class="display">${esc(childName)}의 기록</h2><div class="date">지난 회화 보고서</div></div></div><div class="empty"><div class="e">🗓️</div><h3>아직 저장된 기록이 없어요</h3><p>회화를 정리하면 날짜별로 여기에 쌓여요.</p></div></div>`; return; }
+  const items=[];
+  for(const k of keys){ const r=await store.get(k); if(r) items.push(r); }
+  items.sort((a,b)=>b.ts-a.ts);
+  el.innerHTML=`<div class="report"><div class="rhead"><div class="r-emoji">📅</div><div><h2 class="display">${esc(childName)}의 기록</h2><div class="date">총 ${items.length}회 · 탭하면 보고서를 봐요</div></div></div>
+    ${items.map(r=>`<div class="hitem" data-ts="${r.ts}"><div><div class="hdate">${esc(r.dateStr)}</div><div class="hsub">${r.pron?'🎙️ '+r.pron.avg+'점 · ':''}${(r.student&&r.student.vocab?r.student.vocab.length:0)}개 단어</div></div><div class="hlv">${esc(r.levelLabel||'')}</div><div class="hdel" data-del="${r.ts}">🗑️</div></div>`).join('')}</div>`;
+  el.querySelectorAll('.hitem').forEach(it=>{ it.onclick=async(e)=>{ if(e.target.dataset.del){ if(confirm("이 기록을 삭제할까요?")){ await store.del(`report:${P.id}:${e.target.dataset.del}`); renderHistory(); } return; } const r=await store.get(`report:${P.id}:${it.dataset.ts}`); openHistDetail(r); }; });
+}
+function openHistDetail(r){
+  document.getElementById('histDetailBody').innerHTML=`<div style="display:flex;align-items:center;margin-bottom:10px"><h3 style="flex:1">${esc(r.dateStr)}</h3><button class="ghost" style="width:auto;margin:0;padding:8px 14px" onclick="document.getElementById('histDetail').classList.remove('on')">닫기</button></div>
+    ${studentHTML(r,r.name,r.dateStr,false)}<div style="height:8px"></div>${parentHTML(r,r.name,r.dateStr,false)}`;
+  document.getElementById('histDetail').classList.add('on');
+}
+
+/* ============ 프로필 ============ */
+const EMOJIS=["🦊","🐰","🐻","🐼","🐥","🐙","🦄","🐯","🐶","🐱","🐨","🐸","🦁","🐢","🐵","🐧"];
+let selEmoji="🦊";
+async function loadProfiles(){ profiles=await store.get('profiles')||[]; activeId=await store.get('activeId'); }
+async function saveProfiles(){ await store.set('profiles',profiles); }
+function renderProfileSheet(){
+  const list=document.getElementById('profList'), title=document.getElementById('psTitle');
+  if(profiles.length){ title.textContent="👋 학생을 골라주세요"; document.getElementById('closeSheet').style.display=P?'block':'none'; }
+  else { title.textContent="👋 첫 학생을 등록해요"; document.getElementById('closeSheet').style.display='none'; }
+  list.innerHTML=profiles.map(p=>`<div class="prof ${p.id===activeId?'active':''}" data-id="${p.id}"><div class="pe">${p.emoji}</div><div><div class="pn">${esc(p.name)}</div><div class="pl">${levelInfo(p.level||1.6).e} Lv.${levelInfo(p.level||1.6).n}·${levelInfo(p.level||1.6).label}</div></div><div class="pdel" data-del="${p.id}">🗑️</div></div>`).join('')||'<p style="color:var(--sub);font-weight:600;font-size:13px">아직 등록된 학생이 없어요.</p>';
+  list.querySelectorAll('.prof').forEach(el=>{ el.onclick=async e=>{ if(e.target.dataset.del){ if(confirm("이 학생을 삭제할까요? 기록도 함께 사라져요.")){ await deleteProfile(e.target.dataset.del); } return; } await selectProfile(el.dataset.id); }; });
+  const grid=document.getElementById('emojiGrid');
+  grid.innerHTML=EMOJIS.map(e=>`<button class="${e===selEmoji?'sel':''}" data-e="${e}">${e}</button>`).join('');
+  grid.querySelectorAll('button').forEach(b=>b.onclick=()=>{ selEmoji=b.dataset.e; grid.querySelectorAll('button').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); });
+}
+async function deleteProfile(id){
+  const keys=await store.list(`report:${id}:`); for(const k of keys) await store.del(k);
+  profiles=profiles.filter(p=>p.id!==id); await saveProfiles();
+  if(activeId===id){ activeId=null; P=null; }
+  renderProfileSheet(); if(profiles.length===0){ document.getElementById('profileSheet').classList.add('on'); }
+}
+document.getElementById('addBtn').onclick=async()=>{
+  const name=document.getElementById('newName').value.trim(); if(!name){ document.getElementById('newName').focus(); return; }
+  const p={id:'p'+Date.now(),name,emoji:selEmoji,level:1.6,created:Date.now()};
+  profiles.push(p); await saveProfiles(); document.getElementById('newName').value='';
+  await selectProfile(p.id);
+};
+async function selectProfile(id){
+  activeId=id; await store.set('activeId',id); P=profiles.find(p=>p.id===id); if(!P) return;
+  childName=P.name; levelEMA=P.level||1.6;
+  document.getElementById('hAvatar').textContent=P.emoji;
+  document.getElementById('hName').textContent=P.name;
+  updateBadge(); resetSession();
+  document.getElementById('profileSheet').classList.remove('on');
+  document.querySelector('.tab[data-v="chat"]').click();
+}
+function resetSession(){
+  apiMessages=[]; sessionLog=[]; liveVocab={}; pronScores=[]; turnCount=0; reportsData=null;
+  continuousMode=false; awaitingReply=false; try{ if(recog) recog.abort(); }catch(e){} recording=false;
+  const cb=document.getElementById('convoBtn'); if(cb){ cb.classList.remove('on'); cb.textContent='▶️ 계속 대화하기 (핸즈프리)'; } mic.classList.remove('rec');
+  chat.innerHTML=''; document.getElementById('finishWrap').style.display='none';
+  document.getElementById('starter').style.display='block'; newStarter();
+  renderParent(); renderStudent();
+  setTimeout(()=>speak(document.getElementById('stQ').textContent),400);
+}
+document.getElementById('hAvatar').onclick=openSheet;
+document.getElementById('hSwitch').onclick=openSheet;
+function openSheet(){ selEmoji="🦊"; renderProfileSheet(); document.getElementById('profileSheet').classList.add('on'); }
+document.getElementById('closeSheet').onclick=()=>document.getElementById('profileSheet').classList.remove('on');
+
+/* ============ 음성 인식 ============ */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const mic=document.getElementById('mic'), convoBtn=document.getElementById('convoBtn');
+let recog=null;
+function startListen(){
+  if(!SR||recording||amySpeaking||awaitingReply||recMode==='pron') return;
+  recMode='chat'; try{ recog.start(); recording=true; mic.classList.add('rec'); hint.textContent=continuousMode?'🔴 계속 대화 중 · 말하면 자동으로 전달돼요':'🔴 듣고 있어요... 영어로 말해보세요!'; }catch(e){}
+}
+function stopListen(){ try{ if(recog) recog.stop(); }catch(e){} }
+function resumeIfContinuous(){ if(continuousMode && recMode==='chat' && !amySpeaking && !awaitingReply) setTimeout(startListen,300); }
+
+if(SR){
+  recog=new SR(); recog.lang='en-US'; recog.interimResults=false; recog.maxAlternatives=1;
+  recog.onresult=e=>{ const t=e.results[0][0].transcript; if(recMode==='pron'){ showPronResult(t); } else { txt.value=t; } };
+  recog.onend=()=>{
+    if(recMode==='pron'){ recMode='chat'; return; }
+    recording=false; mic.classList.remove('rec');
+    if(txt.value.trim()){ submit(); return; }               // 말한 게 있으면 자동 전송
+    if(continuousMode && !amySpeaking && !awaitingReply){ startListen(); return; } // 침묵이면 계속 듣기
+    hint.textContent='🎤 버튼을 누르고 영어로 대답해보세요';
+  };
+  recog.onerror=ev=>{
+    recording=false; mic.classList.remove('rec');
+    const code=(ev&&ev.error)||'unknown';
+    if(recMode==='pron'){ recMode='chat'; document.getElementById('pronModal').classList.remove('on'); resumeIfContinuous(); return; }
+    // 재시도해도 소용없는 치명적 에러 → 연속모드 끄고 안내
+    if(code==='network'||code==='service-not-allowed'){ continuousMode=false; convoBtn.classList.remove('on'); convoBtn.textContent='▶️ 계속 대화하기 (핸즈프리)'; hint.textContent='⚠️ 음성인식 서버 연결 실패('+code+') · 이 브라우저는 지원 안 될 수 있어요. 정식 Chrome이나 아이폰 Safari로 열어주세요'; return; }
+    if(code==='not-allowed'){ continuousMode=false; convoBtn.classList.remove('on'); convoBtn.textContent='▶️ 계속 대화하기 (핸즈프리)'; hint.textContent='🎙️ 마이크 권한이 꺼져 있어요 (주소창 옆 마이크 아이콘에서 허용)'; return; }
+    if(code==='audio-capture'){ continuousMode=false; convoBtn.classList.remove('on'); hint.textContent='🎙️ 마이크를 찾을 수 없어요 · 마이크 연결을 확인해주세요'; return; }
+    // no-speech / aborted 등 가벼운 에러
+    if(continuousMode && !amySpeaking && !awaitingReply){ setTimeout(startListen,500); return; }
+    hint.textContent='🎤 다시 눌러서 말해보세요 ('+code+')';
+  };
+  mic.onclick=()=>{ if(recording){ stopListen(); return; } speechSynthesis.cancel(); startListen(); };
+  convoBtn.onclick=()=>{
+    continuousMode=!continuousMode;
+    if(continuousMode){ convoBtn.classList.add('on'); convoBtn.textContent='⏸️ 계속 대화 멈추기'; speechSynthesis.cancel(); if(!amySpeaking&&!awaitingReply) startListen(); }
+    else{ convoBtn.classList.remove('on'); convoBtn.textContent='▶️ 계속 대화하기 (핸즈프리)'; stopListen(); hint.textContent='🎤 버튼을 누르고 영어로 대답해보세요'; }
+  };
+}else{
+  mic.onclick=()=>{ hint.textContent='이 브라우저는 음성인식을 지원하지 않아요. Chrome/웨일에서 열어주세요!'; };
+  convoBtn.onclick=()=>{ hint.textContent='이 브라우저는 음성인식을 지원하지 않아요. Chrome/웨일에서 열어주세요!'; };
+}
+
+/* ============ 시작 ============ */
+(async function init(){
+  await loadProfiles();
+  renderParent(); renderStudent();
+  if(!profiles.length){ renderProfileSheet(); document.getElementById('profileSheet').classList.add('on'); }
+  else { const id=(activeId&&profiles.find(p=>p.id===activeId))?activeId:profiles[0].id; await selectProfile(id); }
+})();
+</script>
+</body>
+</html>
