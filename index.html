@@ -67,7 +67,7 @@
   /* Amy 말하는 무대 (음성 회화용) */
   .amystage{ display:flex; flex-direction:column; align-items:center; gap:5px; padding:14px 0 4px; }
   .afox{ font-size:52px; line-height:1; filter:drop-shadow(0 5px 6px rgba(240,138,93,.28)); }
-  .amystage.speaking .afox{ animation:foxtalk .5s ease-in-out infinite; }
+  .amystage.speaking .afox-wrap{ animation:foxtalk .5s ease-in-out infinite; }
   @keyframes foxtalk{ 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-6px) rotate(3deg)} }
   .awave{ display:flex; align-items:center; gap:3px; height:22px; }
   .awave i{ width:4px; height:6px; background:var(--fox); border-radius:3px; opacity:.3; }
@@ -130,6 +130,36 @@
   .memcard{ aspect-ratio:1/1; border:none; border-radius:13px; background:var(--fox-soft); color:var(--ink); font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; display:grid; place-items:center; padding:4px; word-break:break-word; line-height:1.15; }
   .memcard.up{ background:var(--sun-soft); border:2px solid var(--sun); }
   .memcard.matched{ background:var(--grass-soft); color:var(--grass); border:2px solid var(--grass); }
+
+  /* Amy 꾸미기 액세서리 */
+  .afox-wrap{ position:relative; width:64px; height:64px; display:grid; place-items:center; }
+  .afox-wrap .acc{ position:absolute; pointer-events:none; line-height:1; }
+  .afox-wrap .acc.hat{ top:-13px; font-size:26px; }
+  .afox-wrap .acc.face{ top:15px; font-size:21px; }
+  .afox-wrap .acc.neck{ bottom:-4px; font-size:23px; }
+  .afox-wrap .acc.buddy{ right:-16px; top:6px; font-size:23px; }
+  .afox-wrap.big{ width:104px; height:104px; }
+  .afox-wrap.big .afox{ font-size:82px; }
+  .afox-wrap.big .acc.hat{ top:-18px; font-size:42px; }
+  .afox-wrap.big .acc.face{ top:26px; font-size:34px; }
+  .afox-wrap.big .acc.neck{ bottom:-6px; font-size:38px; }
+  .afox-wrap.big .acc.buddy{ right:-24px; top:12px; font-size:38px; }
+  /* 별 상점 */
+  #shopBody{ max-height:84vh; overflow-y:auto; }
+  .amypreview{ display:grid; place-items:center; padding:16px 0 10px; border-radius:18px; margin:2px 0 4px; }
+  .coinbal{ text-align:center; font-size:14px; font-weight:800; color:var(--amber); margin:4px 0 12px; }
+  #shopMsg{ color:#E0483C; }
+  .coinrow{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .coinnum{ font-family:'Baloo 2',sans-serif; font-size:26px; font-weight:800; color:var(--amber); }
+  .shopcat{ margin-bottom:13px; text-align:left; }
+  .shopgrid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:5px; }
+  .shopitem{ border:1.5px solid var(--line); background:#fff; border-radius:14px; padding:9px 5px; text-align:center; cursor:pointer; font-family:inherit; }
+  .shopitem:active{ transform:scale(.98); }
+  .shopitem .si-e{ font-size:27px; line-height:1.1; }
+  .shopitem .si-n{ font-size:11.5px; font-weight:800; color:var(--ink); margin-top:3px; }
+  .shopitem .si-p{ font-size:11px; font-weight:800; color:var(--amber); margin-top:1px; }
+  .shopitem.eq{ border-color:var(--grass); background:var(--grass-soft); }
+  .shopitem.eq .si-p{ color:var(--grass); }
 
   .finish-wrap{ padding:4px 14px 10px; }
   .finish{ width:100%; border:none; background:var(--grass); color:#fff; border-radius:16px; padding:13px; font-size:15px; font-weight:800; cursor:pointer; font-family:inherit; box-shadow:0 4px 0 rgba(95,169,124,.35); }
@@ -259,7 +289,7 @@
       </div>
     </div>
     <div class="amystage" id="amyStage">
-      <div class="afox">🦊</div>
+      <div class="afox-wrap" id="afoxWrap"><span class="afox">🦊</span></div>
       <div class="awave"><i></i><i></i><i></i><i></i><i></i><i></i></div>
       <div class="astatus" id="amyStatus">🎤 버튼을 누르고 대답해요</div>
     </div>
@@ -317,6 +347,9 @@
   <!-- 게임 놀이터 -->
   <div class="overlay pcenter" id="gameModal"><div class="pmodal" id="gameBody"></div></div>
 
+  <!-- 별 상점 (Amy 꾸미기) -->
+  <div class="overlay pcenter" id="shopModal"><div class="pmodal" id="shopBody"></div></div>
+
   <!-- 레벨업 축하 -->
   <div class="levelup" id="levelup"><div class="lu-card"><div class="lu-badge" id="luBadge">🌿</div><div class="lu-title" id="luTitle">LEVEL UP!</div><div class="lu-sub" id="luSub"></div></div></div>
 </div>
@@ -370,6 +403,7 @@ let apiMessages=[], sessionLog=[], liveVocab={}, pronScores=[];
 let levelEMA=1.6, turnCount=0, pendingStarter=null, reportsData=null;
 let enVoice=null, voiceOn=true, profileMemory="", memorySaved=false;
 let currentReportTs=null, histProfileId=null;   // 세션당 보고서 1개 / 기록 탭에서 보는 프로필
+let amyOutfit={};   // 프로필별 Amy 꾸미기 (hat/face/neck/buddy/bg)
 let recMode='chat', pronTarget='';
 let continuousMode=false, amySpeaking=false, recording=false, awaitingReply=false;
 
@@ -686,7 +720,7 @@ function renderQuizQ(){
   const body=document.getElementById('quizBody');
   if(quizIdx>=quizQs.length){
     const total=quizQs.length, pct=Math.round(quizScore/total*100);
-    if(P){ store.get('quizbest:'+P.id).then(prev=>{ if(pct>(prev||0)) store.set('quizbest:'+P.id,pct); }); }
+    if(P){ store.get('quizbest:'+P.id).then(prev=>{ if(pct>(prev||0)) store.set('quizbest:'+P.id,pct); }); addBonus(quizScore*2); }
     const face=pct>=80?'🌟':pct>=50?'🦊':'💪', msg=pct>=80?'최고야! 단어 박사! 🎉':pct>=50?'잘했어! 조금만 더!':'좋은 도전이야! 다시 해볼까?';
     body.innerHTML=`<div class="pbig">${face}</div><h3>${msg}</h3><div class="pscore" style="color:var(--grass)">${quizScore} / ${total}</div><div class="prow"><button class="p-retry" id="qRetry">🔁 다시 풀기</button><button class="p-ok" id="qClose">확인</button></div>`;
     document.getElementById('qRetry').onclick=openQuiz; document.getElementById('qClose').onclick=closeQuiz; return;
@@ -754,12 +788,14 @@ async function renderReward(){
   const stats=await profileStats();
   const earned=await updateBadges(stats,false);
   const total=earned.length, unlocked=total>=10;
+  const coin=await coinBalance(stats,total);
   const flowerEmojis=['🌱','🌿','🌷','🌸','🌻','🌼'];
   let garden=''; const gN=Math.min(stats.sessions,24);
   for(let i=0;i<gN;i++) garden+=flowerEmojis[Math.min(5,Math.floor(i/4))];
   if(!gN) garden='<span style="color:var(--sub);font-weight:700">아직 씨앗 심기 전이에요.<br>대화를 시작해 정원을 키워요! 🌰</span>';
   el.innerHTML=`<div class="report">
     <div class="rhead"><div class="r-emoji">🏆</div><div><h2 class="display">${esc(childName)}의 보상</h2><div class="date">⭐ 스티커 ${total}개 · 🔥 ${stats.streak}일 연속</div></div></div>
+    <div class="card b"><div class="lbl">⭐ 별 상점 · Amy 꾸미기</div><div class="coinrow"><div class="coinnum">⭐ ${coin}</div><button class="quizbtn" style="width:auto;margin:0;padding:11px 18px" onclick="openShop()">🛍️ 상점 열기</button></div><div class="sub2" style="margin-top:6px">별을 모아 Amy에게 모자·안경·배경을 선물해요!</div></div>
     <div class="card a"><div class="lbl">🔥 연속 출석</div><div class="streakbig">${stats.streak}일 연속!</div><div class="sub2">매일 대화하면 불꽃이 커져요</div></div>
     <div class="card g"><div class="lbl">🌳 나의 정원 · 대화 ${stats.sessions}번</div><div class="garden">${garden}</div></div>
     <div class="card b"><div class="lbl">🎮 게임 놀이터</div>
@@ -820,8 +856,79 @@ function flipCard(i){
   }
 }
 function memWin(){
-  document.getElementById('gameBody').innerHTML=`<div class="pbig">🎉</div><h3>다 맞췄어요! 최고예요!</h3><div class="prow"><button class="p-retry" id="mRetry">🔁 다시</button><button class="p-ok" id="mBack">놀이터로</button></div>`;
+  addBonus(15);
+  document.getElementById('gameBody').innerHTML=`<div class="pbig">🎉</div><h3>다 맞췄어요! 최고예요!</h3><div class="pscore" style="color:var(--amber)">⭐ +15 별!</div><div class="prow"><button class="p-retry" id="mRetry">🔁 다시</button><button class="p-ok" id="mBack">놀이터로</button></div>`;
   document.getElementById('mRetry').onclick=startMemory; document.getElementById('mBack').onclick=openGamePlayground; chime();
+}
+
+/* ============ 별 상점 (Amy 꾸미기) ============ */
+const ITEMS=[
+  {id:'hat_ribbon',cat:'hat',emoji:'🎀',name:'리본',price:20},
+  {id:'hat_cap',cat:'hat',emoji:'🧢',name:'모자',price:30},
+  {id:'hat_tophat',cat:'hat',emoji:'🎩',name:'실크햇',price:50},
+  {id:'hat_grad',cat:'hat',emoji:'🎓',name:'학사모',price:60},
+  {id:'hat_crown',cat:'hat',emoji:'👑',name:'왕관',price:120},
+  {id:'face_glasses',cat:'face',emoji:'👓',name:'안경',price:30},
+  {id:'face_sun',cat:'face',emoji:'🕶️',name:'선글라스',price:45},
+  {id:'neck_scarf',cat:'neck',emoji:'🧣',name:'목도리',price:40},
+  {id:'neck_bow',cat:'neck',emoji:'🎗️',name:'나비 리본',price:35},
+  {id:'buddy_balloon',cat:'buddy',emoji:'🎈',name:'풍선',price:25},
+  {id:'buddy_butterfly',cat:'buddy',emoji:'🦋',name:'나비',price:35},
+  {id:'buddy_star',cat:'buddy',emoji:'⭐',name:'반짝별',price:30},
+  {id:'bg_sakura',cat:'bg',emoji:'🌸',name:'벚꽃',price:40},
+  {id:'bg_sea',cat:'bg',emoji:'🌊',name:'바다',price:40},
+  {id:'bg_night',cat:'bg',emoji:'🌙',name:'밤하늘',price:70},
+  {id:'bg_rainbow',cat:'bg',emoji:'🌈',name:'무지개',price:90},
+];
+const BGMAP={ bg_sakura:'linear-gradient(160deg,#FFE3EE,#FFFFFF)', bg_sea:'linear-gradient(160deg,#D9F0FA,#EAF9FF)', bg_night:'linear-gradient(160deg,#3A3F63,#565B86)', bg_rainbow:'linear-gradient(160deg,#FFE3EC,#E7F0FF,#E3FBE9)' };
+function itemEmoji(id){ const it=ITEMS.find(x=>x.id===id); return it?it.emoji:''; }
+function amyHTML(){ const o=amyOutfit||{}; let h='<span class="afox">🦊</span>';
+  if(o.hat) h+=`<span class="acc hat">${itemEmoji(o.hat)}</span>`;
+  if(o.face) h+=`<span class="acc face">${itemEmoji(o.face)}</span>`;
+  if(o.neck) h+=`<span class="acc neck">${itemEmoji(o.neck)}</span>`;
+  if(o.buddy) h+=`<span class="acc buddy">${itemEmoji(o.buddy)}</span>`;
+  return h;
+}
+function applyBg(el,bgId){ if(el) el.style.background = (bgId&&BGMAP[bgId])?BGMAP[bgId]:''; }
+function renderAmy(){ const w=document.getElementById('afoxWrap'); if(w) w.innerHTML=amyHTML(); applyBg(document.getElementById('amyStage'), amyOutfit.bg); }
+async function addBonus(n){ if(!P||!n) return; const b=(await store.get('coinbonus:'+P.id))||0; await store.set('coinbonus:'+P.id,b+Math.round(n)); }
+async function coinBalance(stats,stickerCount){
+  const bonus=(await store.get('coinbonus:'+P.id))||0, spent=(await store.get('coinspent:'+P.id))||0;
+  const earned=stats.sessions*10 + stickerCount*8 + Math.floor(stats.words/5)*3 + Math.floor(stats.bestPron/10)*2 + bonus;
+  return Math.max(0, earned-spent);
+}
+async function loadCoins(){ const stats=await profileStats(); const earned=await updateBadges(stats,false); return coinBalance(stats,earned.length); }
+function closeShop(){ document.getElementById('shopModal').classList.remove('on'); renderAmy(); }
+async function openShop(){ document.getElementById('shopModal').classList.add('on'); await renderShop(); }
+async function renderShop(){
+  const body=document.getElementById('shopBody');
+  const bal=await loadCoins();
+  const owned=(await store.get('owned:'+P.id))||[];
+  const cats=[['hat','🎩 모자'],['face','👓 안경'],['neck','🧣 목도리'],['buddy','🎈 친구'],['bg','🎨 배경']];
+  body.innerHTML=`<div class="gtop"><span>🛍️ 별 상점 · Amy 꾸미기</span><button class="gx" id="shClose">✕</button></div>
+    <div class="amypreview" id="shopPreview"><div class="afox-wrap big">${amyHTML()}</div></div>
+    <div class="coinbal">⭐ 내 별: <b>${bal}</b><span id="shopMsg"></span></div>
+    ${cats.map(([c,label])=>`<div class="shopcat"><div class="lbl">${label}</div><div class="shopgrid">${ITEMS.filter(i=>i.cat===c).map(i=>{ const own=owned.includes(i.id); const eq=amyOutfit[i.cat]===i.id; return `<button class="shopitem ${eq?'eq':''}" data-id="${i.id}"><div class="si-e">${i.emoji}</div><div class="si-n">${esc(i.name)}</div><div class="si-p">${eq?'착용중':own?'착용하기':'⭐'+i.price}</div></button>`; }).join('')}</div></div>`).join('')}`;
+  applyBg(document.getElementById('shopPreview'), amyOutfit.bg);
+  document.getElementById('shClose').onclick=closeShop;
+  body.querySelectorAll('.shopitem').forEach(b=>b.onclick=()=>{ const id=b.dataset.id; owned.includes(id)?equipItem(id):buyItem(id); });
+}
+async function buyItem(id){
+  const it=ITEMS.find(x=>x.id===id); if(!it||!P) return;
+  const owned=(await store.get('owned:'+P.id))||[];
+  if(owned.includes(id)){ equipItem(id); return; }
+  const bal=await loadCoins();
+  if(bal<it.price){ const m=document.getElementById('shopMsg'); if(m){ m.textContent=' · 별이 부족해요!'; setTimeout(()=>{ if(m)m.textContent=''; },1600); } return; }
+  const spent=(await store.get('coinspent:'+P.id))||0; await store.set('coinspent:'+P.id, spent+it.price);
+  owned.push(id); await store.set('owned:'+P.id, owned);
+  amyOutfit[it.cat]=id; await store.set('amyOutfit:'+P.id, amyOutfit);   // 산 즉시 착용
+  renderAmy(); await renderShop(); celebrate(it.emoji,'GET! 🎁',`<b>${esc(it.name)}</b> 을(를) 얻었어요!`);
+}
+async function equipItem(id){
+  const it=ITEMS.find(x=>x.id===id); if(!it||!P) return;
+  amyOutfit[it.cat] = (amyOutfit[it.cat]===id)?null:id;   // 다시 누르면 벗기
+  await store.set('amyOutfit:'+P.id, amyOutfit);
+  renderAmy(); await renderShop();
 }
 
 /* ============ 기록 ============ */
@@ -883,6 +990,7 @@ async function selectProfile(id){
   childName=P.name; levelEMA=P.level||1.6;
   const _m=(await store.get('memory:'+P.id))||[]; profileMemory=_m.slice(-6).join(' ');   // 과거 대화 기억 로드
   histProfileId=P.id;   // 기록 탭 기본 = 현재 프로필
+  amyOutfit=(await store.get('amyOutfit:'+P.id))||{}; renderAmy();   // Amy 꾸미기 로드
   document.getElementById('hAvatar').textContent=P.emoji;
   document.getElementById('hName').textContent=P.name;
   updateBadge(); resetSession();
