@@ -352,6 +352,9 @@
   <!-- 단어 퀴즈 -->
   <div class="overlay pcenter" id="quizModal"><div class="pmodal" id="quizBody"></div></div>
 
+  <!-- 발음 드릴 (한국인 특화) -->
+  <div class="overlay pcenter" id="phonicsModal"><div class="pmodal" id="phonicsBody"></div></div>
+
   <!-- 게임 놀이터 -->
   <div class="overlay pcenter" id="gameModal"><div class="pmodal" id="gameBody"></div></div>
 
@@ -437,6 +440,34 @@ let amyOutfit={};   // 프로필별 Amy 꾸미기 (hat/face/neck/buddy/bg)
 let recMode='chat', pronTarget='';
 let continuousMode=false, amySpeaking=false, recording=false, awaitingReply=false;
 let childAge=10, activeScenario=null;
+let srsMap={}, weakList=[];   // srsMap: 단어별 간격반복 상태 / weakList: 반복되는 약점
+
+/* ============ 어휘 정착: 간격 반복(SRS, Leitner) ============
+   저장 키 srs:<pid> = { 소문자단어: {word,kr,box,due} } (box 0~5, due=다음 복습 시각 ms). 순수 추가 키. */
+const SRS_INTERVAL_MS=[0, 86400000, 3*86400000, 7*86400000, 16*86400000, 30*86400000]; // 즉시,1,3,7,16,30일
+function srsTouch(word,kr){
+  if(!word) return; const w=word.toLowerCase();
+  if(!srsMap[w]) srsMap[w]={word,kr:kr||'',box:0,due:Date.now()};
+  else if(kr && !srsMap[w].kr) srsMap[w].kr=kr;
+}
+function srsGrade(word,correct){
+  const w=(word||'').toLowerCase(); const e=srsMap[w]; if(!e) return;
+  e.box = correct ? Math.min(5,(e.box||0)+1) : 0;
+  e.due = Date.now() + SRS_INTERVAL_MS[e.box];
+  if(P) store.set('srs:'+P.id, srsMap);
+}
+function srsSaveTouched(){ if(P) store.set('srs:'+P.id, srsMap); }
+// 복습 우선순위: due가 지난(복습할 때 된) 단어 먼저, 그다음 가까운 순
+function dueFirst(words){
+  const now=Date.now();
+  return words.slice().sort((a,b)=>{
+    const ea=srsMap[a.word.toLowerCase()], eb=srsMap[b.word.toLowerCase()];
+    const da=ea?ea.due:0, db=eb?eb.due:0;
+    const oa=da<=now?0:1, ob=db<=now?0:1;
+    return oa!==ob ? oa-ob : da-db;
+  });
+}
+function srsDueWords(){ const now=Date.now(); return Object.values(srsMap).filter(e=>e.due<=now); }
 
 const LEVELS=[{e:"🌱",label:"씨앗"},{e:"🌿",label:"새싹"},{e:"🌳",label:"나무"},{e:"🌸",label:"꽃"},{e:"⭐",label:"별"}];
 function levelInfo(n){ const i=Math.max(0,Math.min(4,Math.round(n)-1)); return {n:i+1,e:LEVELS[i].e,label:LEVELS[i].label}; }
@@ -548,8 +579,11 @@ async function talk(userText){
   const askedNote=pendingStarter?`You just asked her: "${pendingStarter}". She is answering it.`:"";
   const memNote=profileMemory?`\nMEMORY from your past chats with her (use ONE of these naturally to build continuity when it fits, e.g. ask a warm follow-up about something she mentioned before — do NOT list them and don't force it every turn): ${profileMemory}`:"";
   const scenarioNote=activeScenario?`\nROLE-PLAY SCENE: ${activeScenario.sys} Stay in character and keep the scene going, but still keep language simple for her level and end with one open-ended question.`:"";
+  const reviewW=srsDueWords().map(e=>e.word).slice(0,3);
+  const reviewNote=reviewW.length?`\nWORD REVIEW: naturally REUSE one of these words she learned before, so she meets it again in context (don't force all, weave in ~one when it fits): ${reviewW.join(', ')}`:"";
+  const weakNote=weakList.length?`\nHER RECURRING WEAK POINTS (from past reports): ${weakList.slice(-4).join(' / ')}. When it naturally comes up, gently help her with these — model the right form, never scold.`:"";
   const system=`You are Juny, a warm, patient, cheerful English tutor (a friendly fox) for a ${childAge}-year-old Korean child. This is a speaking practice study.
-${askedNote}${memNote}${scenarioNote}
+${askedNote}${memNote}${scenarioNote}${reviewNote}${weakNote}
 Her current level is about ${target} out of 5 (1=absolute beginner, 5=fluent kid).
 STYLE:
 - Speak in SIMPLE, SHORT English, only 1-2 short sentences. Match difficulty to level ${target}.
@@ -575,7 +609,8 @@ Return ONLY a JSON object (no markdown) with keys:
     rmTyping(); addAmy(obj.reply,obj.korean,obj.correction);
     apiMessages.push({role:'assistant',content:obj.reply});
     sessionLog.push({child:userText,amy:obj.reply,correction:obj.correction||""});
-    (obj.vocab||[]).forEach(v=>{ if(v&&v.word) liveVocab[v.word.toLowerCase()]={kr:v.kr||"",word:v.word}; });
+    (obj.vocab||[]).forEach(v=>{ if(v&&v.word){ liveVocab[v.word.toLowerCase()]={kr:v.kr||"",word:v.word}; srsTouch(v.word,v.kr); } });
+    if((obj.vocab||[]).some(v=>v&&v.word)) srsSaveTouched();
     if(typeof obj.level==='number'){
       const prev=levelInfo(levelEMA).n;
       const gap=obj.level-levelEMA;                          // 실력 추정치 - 현재 레벨
@@ -659,7 +694,8 @@ Return ONLY JSON (no markdown) with keys:
 "levelLabel": short Korean like "Lv.2 · 새싹 단계",
 "parent": {"summary":"2-3문장 총평(한국어, 단답/완전한 문장 여부 언급)","strengths":["잘한 점 2-3"],"improve":["개선점 1-3, 부드럽게"],"attitude":"참여도/태도 한 줄","nextGoal":"다음 목표 한 줄","tip":"집에서 도울 구체 팁 한 줄"},
 "student": {"praise":"아이에게 하는 칭찬, 쉬운 한국어 한 문장","corrections":[{"said":"아이가 말한 문장/단어(영어)","better":"더 좋은 영어 문장","why":"짧은 한국어 이유"}],"vocab":[{"word":"영어단어","kr":"한국어 뜻","example":"쉬운 영어 예문"}]},
-"memory": "1-2 short ENGLISH sentences to remember for next time: what she talked about, her interests/likes, and anything to follow up on next chat (e.g. 'She loves cats and got a new bike. Ask how her bike ride went.'). Keep it concrete and personal."
+"memory": "1-2 short ENGLISH sentences to remember for next time: what she talked about, her interests/likes, and anything to follow up on next chat (e.g. 'She loves cats and got a new bike. Ask how her bike ride went.'). Keep it concrete and personal.",
+"weakness": "ONE short English phrase naming her MAIN recurring grammar/speaking weakness this session, for the tutor to target next time (e.g. 'drops articles a/the', 'uses present tense for past events', 'answers in single words instead of full sentences'); empty string if nothing notable."
 corrections: 실수 문장뿐 아니라, 단어로만 답한 경우 그것을 완전한 문장으로 바꾼 예시도 넣어줘(최대5). vocab: 대화에서 배울 유용한 단어(최대6).`;
   try{
     const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-5",max_tokens:1500,system,messages:[{role:'user',content:`Transcript:\n${transcript}`}]})});
@@ -670,6 +706,15 @@ corrections: 실수 문장뿐 아니라, 단어로만 답한 경우 그것을 �
     reportsData={levelNum:levelInfo(levelEMA).n,levelLabel:`Lv.${levelInfo(levelEMA).n} · ${levelInfo(levelEMA).label} 단계`,parent:{summary:"보고서를 만드는 중 문제가 있었어요. 다시 시도해주세요.",strengths:[],improve:[],attitude:"",nextGoal:"",tip:""},student:{praise:"오늘도 잘했어요! 🎉",corrections:sessionLog.filter(t=>t.correction).map(t=>({said:t.child,better:"",why:t.correction})),vocab:Object.values(liveVocab).map(v=>({word:v.word,kr:v.kr,example:""}))}};
   }
   reportsData.pron=ps;
+  // 배운 단어를 SRS(복습 대상)에 등록 + 반복 약점 누적(프로필별 최근 8개, 세션당 1회)
+  (reportsData.student&&reportsData.student.vocab||[]).forEach(v=>{ if(v&&v.word) srsTouch(v.word,v.kr); });
+  srsSaveTouched();
+  if(!memorySaved && P && reportsData.weakness && String(reportsData.weakness).trim()){
+    const wk=String(reportsData.weakness).trim();
+    if(!weakList.includes(wk)) weakList.push(wk);
+    weakList=weakList.slice(-8);
+    await store.set('weak:'+P.id, weakList);
+  }
   await saveReport(reportsData);
   // 프로필별 대화 기억 저장 → 다음 세션에서 이어서 대화 (세션당 1회만)
   if(!memorySaved && P && reportsData.memory){
@@ -741,17 +786,19 @@ async function currentViewReport(){
 }
 function newChatBtn(){ return `<button class="newchat" onclick="startNewChat()">🆕 새로운 대화 시작하기</button>`; }
 function quizLauncher(){ return `<button class="quizbtn" onclick="openQuiz()">🎯 지금까지 배운 단어 퀴즈 풀기</button>`; }
+function phonicsLauncher(){ return `<button class="quizbtn" style="background:linear-gradient(135deg,#BFE3FF,#8FC7F5);color:#194b73;box-shadow:0 4px 0 rgba(143,199,245,.5)" onclick="openPhonics()">🗣️ 한국인 특화 발음 연습</button>`; }
 function startNewChat(){ resetSession(); document.querySelector('.tab[data-v="chat"]').click(); }
 async function renderParent(){
   const el=document.getElementById('parentBody'); const v=await currentViewReport();
   if(!v){ el.innerHTML=`<div class="report">${sessionLog.length<2?emptyBlock("아직 보고서가 없어요","아이와 조금 더 대화한 뒤<br>대화 탭에서 ‘회화 정리’를 눌러주세요."):emptyBlock("정리할 준비가 됐어요","대화 탭 아래 <b>‘오늘 회화 정리’</b> 버튼을<br>눌러 보고서를 만들어주세요.")}</div>`; return; }
-  el.innerHTML=`<div class="report">${parentHTML(v.data,v.data.name||childName,v.when,v.live)}${newChatBtn()}</div>`;
+  const coach = v.live && weakList.length ? `<div class="card a"><div class="lbl">🎯 반복해서 볼 부분 (맞춤 코칭)</div><ul>${weakList.slice(-4).map(w=>`<li>${esc(w)}</li>`).join('')}</ul><div style="font-size:11.5px;color:var(--sub);font-weight:700;margin-top:4px">Juny가 다음 대화에서 이 부분을 자연스럽게 도와줄게요.</div></div>` : '';
+  el.innerHTML=`<div class="report">${parentHTML(v.data,v.data.name||childName,v.when,v.live)}${coach}${newChatBtn()}</div>`;
 }
 async function renderStudent(){
   const el=document.getElementById('studentBody'); const v=await currentViewReport();
   const body = v ? `${studentHTML(v.data,v.data.name||childName,v.when,v.live)}${newChatBtn()}`
                  : (sessionLog.length<2?emptyBlock("아직 보고서가 없어요","Juny랑 조금 더 이야기한 다음에<br>보고서를 받아볼 수 있어요!"):emptyBlock("보고서 준비 완료!","대화 탭에서 <b>‘회화 정리’</b>를 누르면<br>오늘 배운 걸 정리해줄게요 🎉"));
-  el.innerHTML=`<div class="report">${quizLauncher()}${body}</div>`;
+  el.innerHTML=`<div class="report">${quizLauncher()}${phonicsLauncher()}${body}</div>`;
 }
 
 /* ============ 단어 퀴즈 (누적된 단어 기반 4지선다) ============ */
@@ -807,8 +854,9 @@ async function openQuiz(){
   modal.classList.add('on');
   if(words.length<4){ body.innerHTML=`<div class="pbig">📚</div><h3>단어가 조금 더 모이면<br>퀴즈를 풀 수 있어요!</h3><p style="color:var(--sub);font-weight:700;margin-top:6px">지금 ${words.length}개 모음 · 4개 이상이면 시작해요</p><div class="prow"><button class="p-ok" id="qClose">확인</button></div>`; document.getElementById('qClose').onclick=closeQuiz; return; }
   body.innerHTML=`<div class="pbig">🦊</div><h3>퀴즈 만드는 중...</h3><p style="color:var(--sub);font-weight:700;margin-top:6px">배운 단어로 새 문제를 만들어요</p>`;
-  const ai=await aiQuiz(words);                                 // 영영뜻·반대말·유의어
-  const local=localMeaningQuiz(words);                          // 뜻 고르기
+  const pool=dueFirst(words).slice(0,14);                       // 복습할 때 된 단어 우선(SRS)
+  const ai=await aiQuiz(pool);                                  // 영영뜻·반대말·유의어
+  const local=localMeaningQuiz(pool);                           // 뜻 고르기
   quizQs = ai.length ? shuffleArr(ai.concat(local)).slice(0,10) : local.slice(0,10);
   quizIdx=0; quizScore=0; renderQuizQ();
 }
@@ -816,7 +864,7 @@ function renderQuizQ(){
   const body=document.getElementById('quizBody');
   if(quizIdx>=quizQs.length){
     const total=quizQs.length, pct=Math.round(quizScore/total*100);
-    if(P){ store.get('quizbest:'+P.id).then(prev=>{ if(pct>(prev||0)) store.set('quizbest:'+P.id,pct); }); addBonus(quizScore*2); }
+    if(P){ store.get('quizbest:'+P.id).then(prev=>{ if(pct>(prev||0)) store.set('quizbest:'+P.id,pct); }); store.set('quizday:'+P.id, dayKey()); addBonus(quizScore*2); }
     const face=pct>=80?'🌟':pct>=50?'🦊':'💪', msg=pct>=80?'최고야! 단어 박사! 🎉':pct>=50?'잘했어! 조금만 더!':'좋은 도전이야! 다시 해볼까?';
     body.innerHTML=`<div class="pbig">${face}</div><h3>${msg}</h3><div class="pscore" style="color:var(--grass)">${quizScore} / ${total}</div><div class="prow"><button class="p-retry" id="qRetry">🔁 다시 풀기</button><button class="p-ok" id="qClose">확인</button></div>`;
     document.getElementById('qRetry').onclick=openQuiz; document.getElementById('qClose').onclick=closeQuiz; return;
@@ -828,8 +876,38 @@ function renderQuizQ(){
     const correct=b.dataset.o===q.answer;
     body.querySelectorAll('.qopt').forEach(x=>{ x.disabled=true; if(x.dataset.o===q.answer) x.classList.add('right'); else if(x===b) x.classList.add('wrong'); });
     if(correct) quizScore++;
+    srsGrade(q.word, correct);   // 맞으면 복습 간격 늘리고, 틀리면 다시 자주 나오게
     setTimeout(()=>{ quizIdx++; renderQuizQ(); }, correct?750:1400);
   });
+}
+
+/* ============ 발음 드릴 (한국인 특화 소리) ============ */
+const PHONICS=[
+  {id:'rl',label:'R vs L',emoji:'🌀',words:['rice','lice','right','light','red','led','road','load','pray','play','fry','fly']},
+  {id:'fp',label:'F vs P',emoji:'💨',words:['fan','pan','coffee','copy','fine','pine','leaf','leap','face','pace']},
+  {id:'th',label:'TH 소리',emoji:'👅',words:['think','three','thank','mouth','this','that','mother','brother','bath','with']},
+  {id:'vb',label:'V vs B',emoji:'🐝',words:['van','ban','very','berry','vest','best','vote','boat','curve','curb']},
+  {id:'zs',label:'Z / S',emoji:'🎐',words:['zoo','zebra','zero','buzz','nose','rose','eyes','prize','busy','music']},
+  {id:'end',label:'끝소리 또렷이',emoji:'🔚',words:['cat','cap','dog','duck','book','milk','bird','hand','jump','desk']}
+];
+function closePhonics(){ document.getElementById('phonicsModal').classList.remove('on'); speechSynthesis.cancel(); }
+function openPhonics(){
+  const body=document.getElementById('phonicsBody');
+  document.getElementById('phonicsModal').classList.add('on');
+  body.innerHTML=`<div class="gtop"><span>🗣️ 발음 연습</span><button class="gx" id="phClose">✕</button></div>
+    <div class="gsub">한국어 화자가 헷갈리기 쉬운 소리만 모았어요. 소리를 골라 따라 말해요!</div>
+    <div class="gmenu">${PHONICS.map(p=>`<button class="gcard" data-id="${p.id}"><div class="ge">${p.emoji}</div><div><div class="gname">${esc(p.label)}</div><div class="gdesc">${p.words.slice(0,4).join(' · ')} …</div></div></button>`).join('')}</div>`;
+  document.getElementById('phClose').onclick=closePhonics;
+  body.querySelectorAll('.gcard').forEach(b=>b.onclick=()=>showPhonicsSet(b.dataset.id));
+}
+function showPhonicsSet(id){
+  const set=PHONICS.find(p=>p.id===id); if(!set) return;
+  const body=document.getElementById('phonicsBody');
+  body.innerHTML=`<div class="gtop"><span>${set.emoji} ${esc(set.label)}</span><button class="gx" id="phBack">←</button></div>
+    <div class="gsub">단어를 누르면 듣고 → 따라 말하기(발음 채점)로 이어져요.</div>
+    <div class="qopts">${set.words.map(w=>`<button class="qopt" data-w="${esc(w)}">🔊 ${esc(w)}</button>`).join('')}</div>`;
+  document.getElementById('phBack').onclick=openPhonics;
+  body.querySelectorAll('.qopt').forEach(b=>b.onclick=()=>{ const w=b.dataset.w; speak(w); setTimeout(()=>startPron(w),700); });
 }
 
 /* ============ 보상 (스티커·스트릭·정원·게임) ============ */
@@ -857,18 +935,22 @@ function calcStreak(daysSet){
   if(!daysSet.has(key(d))){ d.setDate(d.getDate()-1); if(!daysSet.has(key(d))) return 0; }
   let n=0; while(daysSet.has(key(d))){ n++; d.setDate(d.getDate()-1); } return n;
 }
+function dayKey(ts){ const d=ts?new Date(ts):new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }
 async function profileStats(){
   const keys=await store.list(`report:${P.id}:`);
   const reports=[]; for(const k of keys){ const r=await store.get(k); if(r) reports.push(r); }
   const words=new Set(); let bestPron=0, maxLevel=levelInfo(P.level||1.6).n; const days=new Set();
+  const tk=dayKey(); let todaySessions=0; const todayWords=new Set();
   reports.forEach(r=>{
     if(r.student&&r.student.vocab) r.student.vocab.forEach(v=>{ if(v&&v.word) words.add(v.word.toLowerCase()); });
     if(r.pron&&r.pron.avg>bestPron) bestPron=r.pron.avg;
     if(r.levelNum>maxLevel) maxLevel=r.levelNum;
     const d=new Date(r.ts); days.add(`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
+    if(dayKey(r.ts)===tk){ todaySessions++; if(r.student&&r.student.vocab) r.student.vocab.forEach(v=>{ if(v&&v.word) todayWords.add(v.word.toLowerCase()); }); }
   });
   const bestQuiz=(await store.get('quizbest:'+P.id))||0;
-  return {sessions:reports.length, words:words.size, bestPron, maxLevel, bestQuiz, streak:calcStreak(days)};
+  const quizToday=((await store.get('quizday:'+P.id))===tk);
+  return {sessions:reports.length, words:words.size, bestPron, maxLevel, bestQuiz, streak:calcStreak(days), todaySessions, todayWords:todayWords.size, quizToday};
 }
 async function updateBadges(stats,doCelebrate){
   const earned=BADGES.filter(b=>b.need(stats)).map(b=>b.id);
@@ -889,8 +971,20 @@ async function renderReward(){
   let garden=''; const gN=Math.min(stats.sessions,24);
   for(let i=0;i<gN;i++) garden+=flowerEmojis[Math.min(5,Math.floor(i/4))];
   if(!gN) garden='<span style="color:var(--sub);font-weight:700">아직 씨앗 심기 전이에요.<br>대화를 시작해 정원을 키워요! 🌰</span>';
+  // 오늘의 미션
+  const missions=[
+    {e:'🗣️',t:'오늘 Juny와 대화하고 정리하기', done: stats.todaySessions>=1},
+    {e:'📚',t:'오늘 새 단어 5개 배우기', done: stats.todayWords>=5, prog:`${Math.min(stats.todayWords,5)}/5`},
+    {e:'🎯',t:'배운 단어 퀴즈 풀기', done: !!stats.quizToday}
+  ];
+  const missDone=missions.filter(m=>m.done).length, missAll=missDone===missions.length;
+  if(missAll){ const mk='missionday:'+P.id; const last=await store.get(mk); if(last!==dayKey()){ await store.set(mk,dayKey()); await addBonus(15); } }
+  const missionCard=`<div class="card"><div class="lbl">🎯 오늘의 미션 (${missDone}/${missions.length})${missAll?' · 완료! ⭐+15':''}</div>
+    ${missions.map(m=>`<div style="display:flex;align-items:center;gap:9px;padding:7px 2px;font-weight:800;font-size:14px;color:${m.done?'var(--grass)':'var(--ink)'}"><span style="font-size:18px">${m.done?'✅':m.e}</span><span style="flex:1">${esc(m.t)}</span>${m.prog?`<span class="sub2">${m.prog}</span>`:''}</div>`).join('')}
+    <div class="sub2" style="margin-top:4px">3개 다 완료하면 별 15개 보너스! (매일 새로워져요)</div></div>`;
   el.innerHTML=`<div class="report">
     <div class="rhead"><div class="r-emoji">🏆</div><div><h2 class="display">${esc(childName)}의 보상</h2><div class="date">⭐ 스티커 ${total}개 · 🔥 ${stats.streak}일 연속</div></div></div>
+    ${missionCard}
     <div class="card b"><div class="lbl">⭐ 별 상점 · Juny 꾸미기</div><div class="coinrow"><div class="coinnum">⭐ ${coin}</div><button class="quizbtn" style="width:auto;margin:0;padding:11px 18px" onclick="openShop()">🛍️ 상점 열기</button></div><div class="sub2" style="margin-top:6px">별을 모아 Juny에게 모자·안경·배경을 선물해요!</div></div>
     <div class="card a"><div class="lbl">🔥 연속 출석</div><div class="streakbig">${stats.streak}일 연속!</div><div class="sub2">매일 대화하면 불꽃이 커져요</div></div>
     <div class="card g"><div class="lbl">🌳 나의 정원 · 대화 ${stats.sessions}번</div><div class="garden">${garden}</div></div>
@@ -1087,6 +1181,8 @@ async function selectProfile(id){
   activeId=id; await store.set('activeId',id); P=profiles.find(p=>p.id===id); if(!P) return;
   childName=P.name; childAge=P.age||10; levelEMA=P.level||1.6;
   const _m=(await store.get('memory:'+P.id))||[]; profileMemory=_m.slice(-6).join(' ');   // 과거 대화 기억 로드
+  srsMap=(await store.get('srs:'+P.id))||{};   // 어휘 간격반복 상태 로드
+  weakList=(await store.get('weak:'+P.id))||[];   // 반복 약점 로드
   histProfileId=P.id;   // 기록 탭 기본 = 현재 프로필
   amyOutfit=(await store.get('amyOutfit:'+P.id))||{}; renderAmy();   // Amy 꾸미기 로드
   document.getElementById('hAvatar').textContent=P.emoji;
