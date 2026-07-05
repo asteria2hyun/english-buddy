@@ -367,9 +367,15 @@
 const _mem={};
 let _serverOK=true;   // 서버 저장소(KV) 연결 여부 — 미설정이면 자동으로 localStorage만 사용
 async function _api(action,key,value,prefix){
-  const r=await fetch('/api/store',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,key,value,prefix})});
-  if(!r.ok) throw new Error('store '+r.status);
-  return r.json();
+  let lastErr;
+  for(let attempt=0;attempt<3;attempt++){   // 일시적 네트워크 끊김 재시도 (데이터 유실 방지)
+    try{
+      const r=await fetch('/api/store',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,key,value,prefix})});
+      if(!r.ok) throw new Error('store '+r.status);
+      return await r.json();
+    }catch(e){ lastErr=e; }
+  }
+  throw lastErr;
 }
 const store={
   async get(k){
@@ -403,6 +409,22 @@ const store={
     return [...set];
   }
 };
+// 이 기기(localStorage)에만 있는 데이터를 서버로 백업 — 서버에 이미 있는 건 절대 덮지 않음(빈 칸만 채움)
+async function backupLocalToServer(){
+  if(!_serverOK) return;
+  const pat=/^(profiles|activeId|report:|memory:|quizbest:|badges:|coinbonus:|coinspent:|owned:|amyOutfit:)/;
+  let localKeys=[];
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&pat.test(k)) localKeys.push(k); } }catch(e){ return; }
+  for(const k of localKeys){
+    try{
+      const d=await _api('get',k);
+      if(d&&d.disabled){ _serverOK=false; return; }
+      if(d&&d.ok && d.value==null){                 // 서버에 없음 → 로컬 값 올리기
+        const raw=localStorage.getItem(k); if(raw!=null){ try{ await _api('set',k,JSON.parse(raw)); }catch(e){} }
+      }
+    }catch(e){ /* 네트워크 문제면 다음 기회에 */ }
+  }
+}
 
 /* ============ 상태 ============ */
 let profiles=[], activeId=null, P=null;
@@ -1135,6 +1157,7 @@ if(SR){
 (async function init(){
   renderScenarioChips();
   await loadProfiles();
+  backupLocalToServer();   // 이 기기 데이터를 서버로 백업(빈 칸만 채움, 백그라운드)
   renderParent(); renderStudent();
   if(!profiles.length){ renderProfileSheet(); document.getElementById('profileSheet').classList.add('on'); }
   else { const id=(activeId&&profiles.find(p=>p.id===activeId))?activeId:profiles[0].id; await selectProfile(id); }
