@@ -279,8 +279,17 @@ async function _api(action,key,value,prefix){
 }
 const store={
   async get(k){
-    if(_serverOK){ try{ const d=await _api('get',k); if(d&&d.disabled){ _serverOK=false; } else if(d&&d.ok){ return d.value!=null?JSON.parse(d.value):null; } }catch(e){} }
-    try{ const v=localStorage.getItem(k); if(v!=null) return JSON.parse(v); }catch(e){}
+    let localVal;   // 이 기기 로컬 값 (마이그레이션용)
+    try{ const v=localStorage.getItem(k); if(v!=null) localVal=JSON.parse(v); }catch(e){}
+    if(_serverOK){ try{ const d=await _api('get',k);
+      if(d&&d.disabled){ _serverOK=false; }
+      else if(d&&d.ok){
+        if(d.value!=null) return JSON.parse(d.value);                 // 서버 값이 우선
+        if(localVal!==undefined){ try{ await _api('set',k,localVal); }catch(e){} return localVal; } // 서버가 비었고 로컬에 있으면 서버로 올림
+        return null;
+      }
+    }catch(e){} }
+    if(localVal!==undefined) return localVal;
     return (k in _mem)?_mem[k]:null;
   },
   async set(k,v){ _mem[k]=v;
