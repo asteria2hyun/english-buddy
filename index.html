@@ -673,12 +673,14 @@ function curriculumParentCard(){
 }
 
 /* ============ 음성 ============ */
-function pickVoice(){ const vs=speechSynthesis.getVoices(); const en=vs.filter(v=>/^en([-_]|$)/i.test(v.lang));
-  enVoice=en.find(v=>/en[-_]?US/i.test(v.lang)&&/google/i.test(v.name))            // Google US (가장 자연스러움)
+function pickVoice(){ const vs=speechSynthesis.getVoices(); const en=vs.filter(v=>/^en([-_]|$)/i.test(v.lang)); const us=v=>/en[-_]?US/i.test(v.lang);
+  enVoice=en.find(v=>us(v)&&/natural|neural|online/i.test(v.name))                  // Edge/Win 뉴럴(가장 사람 같음)
+        ||en.find(v=>/natural|neural|online/i.test(v.name))
+        ||en.find(v=>us(v)&&/google/i.test(v.name))                                 // Google US
         ||en.find(v=>/google/i.test(v.name))
-        ||en.find(v=>/natural|samantha|aria|jenny|ava|libby/i.test(v.name))         // 고품질 내장 음성
-        ||en.find(v=>/en[-_]?US/i.test(v.lang)&&/female|zira/i.test(v.name))
-        ||en.find(v=>/en[-_]?US/i.test(v.lang))||en[0]||null; }
+        ||en.find(v=>us(v)&&/aria|jenny|ava|libby|samantha|allison|nicky|karen|moira/i.test(v.name))  // 고품질 내장 여성 음성
+        ||en.find(v=>us(v)&&/female|zira/i.test(v.name))
+        ||en.find(v=>us(v))||en[0]||null; }
 speechSynthesis.onvoiceschanged=pickVoice; pickVoice();
 function speakRate(){ return [0.72,0.8,0.88,0.95,1.0][levelInfo(levelEMA).n-1]; }
 function setSpeaking(on){ const s=document.getElementById('amyStage'); if(s) s.classList.toggle('speaking',on); const st=document.getElementById('amyStatus'); if(st) st.textContent=on?'🗣️ Juny가 말하고 있어요':'🎤 이제 네가 말할 차례!'; }
@@ -686,7 +688,7 @@ function speak(t,fromAmy){
   if(!voiceOn||!t){ if(fromAmy) afterAmy(); return; }
   speechSynthesis.cancel();
   try{ if(recording&&recog) recog.stop(); }catch(e){}   // 에코 방지: Amy 말하는 동안 마이크 정지
-  const u=new SpeechSynthesisUtterance(t); u.lang='en-US'; u.rate=speakRate(); u.pitch=1.0; if(enVoice)u.voice=enVoice;
+  const u=new SpeechSynthesisUtterance(t); u.lang='en-US'; u.rate=speakRate(); u.pitch=1.06; if(enVoice)u.voice=enVoice;
   if(fromAmy) amySpeaking=true;
   setSpeaking(true);
   u.onend=()=>{ setSpeaking(false); if(fromAmy){ amySpeaking=false; afterAmy(); } };
@@ -741,6 +743,7 @@ async function talk(userText){
 ${askedNote}${memNote}${scenarioNote}${reviewNote}${weakNote}${curriculumNote}
 Her current level is about ${target} out of 5 (1=absolute beginner, 5=fluent kid).
 STYLE:
+- SOUND LIKE A REAL, PLAYFUL FRIEND, not a textbook or robot: use casual SPOKEN English with contractions (I'm, you're, that's, let's) and natural reactions/interjections ("Ooh!", "Wow!", "Yay!", "Aww", "Haha", "Really?", "That's so cool!"). Vary how you start your sentences; never sound scripted, stiff, formal, or repetitive.
 ${styleNote}
 - GROWTH (i+1, important): always aim ONE step ABOVE her comfort so she actually IMPROVES. Never accept a too-easy or one-word answer as the end — follow up so she produces MORE and richer language. Teach a new word or expression when it naturally fits and show its short meaning.
 - Be warm and encouraging, but do NOT call her by name — never say her name or insert it into sentences. Just talk naturally.
@@ -760,7 +763,7 @@ FULL-SENTENCE COACHING (important):
 - SPOKEN CORRECTION (important): whenever you give a non-empty "better" sentence, your spoken "reply" MUST say that corrected sentence OUT LOUD and warmly invite her to repeat it — e.g. "Good try! You can say it even better: 'I feel worried because my daughter is sick.' Can you say it too?" On THAT turn do NOT also ask a new different question — repeating the sentence IS the task. On the NEXT turn, praise her for repeating it, then continue naturally.
 Return ONLY a JSON object (no markdown) with keys:
 "reply": your English response (1-2 short sentences; usually ends with a question, but NOT when she is saying goodbye/leaving or the moment just calls for reacting warmly),
-"korean": natural Korean translation of your reply,
+"korean": natural, warm SPOKEN Korean in a friendly casual tone (다정한 반말 말투), NOT stiff/literal/textbook,
 "correction": if she made a grammar/word mistake OR answered with only a word/fragment, ONE short gentle Korean tip — the REASON / what to improve only (do NOT put the full English sentence here); else "",
 "better": the corrected or upgraded FULL ENGLISH sentence she should try to say (fix her mistake, or turn her one-word/fragment answer into a natural full sentence), e.g. "My favorite color is blue."; "" if there is nothing to correct,
 "level": integer 1-5 estimate of HER level from her message,
@@ -1398,8 +1401,14 @@ document.getElementById('addBtn').onclick=async()=>{
   const name=document.getElementById('newName').value.trim(); if(!name){ document.getElementById('newName').focus(); return; }
   const ageRaw=parseInt(document.getElementById('newAge').value,10);
   const age=(ageRaw>=4&&ageRaw<=19)?ageRaw:10;
-  const p={id:'p'+Date.now(),name,emoji:selEmoji,age,level:1.6,created:Date.now()};
-  profiles.push(p); await saveProfiles(); document.getElementById('newName').value=''; document.getElementById('newAge').value='';
+  const step=startStepForAge(age);                              // 나이 맞춤 시작 단계 추천
+  const u=CURRICULUM[step-1]||CURRICULUM[0];
+  const lvlByBand={'Pre-A1':1.6,'A1':2.6,'A2':3.6,'B1':4.4}[u.cefr]||1.6;
+  const p={id:'p'+Date.now(),name,emoji:selEmoji,age,level:lvlByBand,created:Date.now()};
+  profiles.push(p); await saveProfiles();
+  await store.set('curriculum:'+p.id,{step});                   // 추천 시작 단계 저장
+  document.getElementById('newName').value=''; document.getElementById('newAge').value='';
+  alert(`${name}(${age}살)에 맞춰 Step ${step} · ${u.title} (${u.cefr})에서 시작할게요! 🎯\n(부모 탭에서 언제든 조절 가능)`);
   await selectProfile(p.id);
 };
 function startStepForAge(age){ age=age||10; return age<=6?1: age<=7?2: age<=8?3: age<=9?4: age<=10?5: age<=11?6: 7; }   // 나이별 시작 단계
