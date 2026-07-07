@@ -309,6 +309,21 @@
   .listening .pbig{ animation:pulse2 1s infinite; }
   @keyframes pulse2{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 
+  /* 🏡 마당 (접속 캐릭터 놀이 씬) */
+  .yard{ position:relative; width:92%; max-width:460px; height:78vh; max-height:660px; border-radius:26px; overflow:hidden; box-shadow:0 12px 40px rgba(40,60,90,.3); background:linear-gradient(#BFE3FF 0%, #E3F3FF 52%, #CDEBB0 52%, #B7E39A 100%); }
+  .yard-top{ position:absolute; top:12px; left:0; right:0; z-index:6; display:flex; align-items:center; justify-content:space-between; padding:0 14px; }
+  .yard-top .t{ font-weight:800; font-size:15px; color:#2b4a6b; background:rgba(255,255,255,.75); border-radius:999px; padding:4px 12px; }
+  .yard-x{ border:none; background:rgba(255,255,255,.9); color:#2b4a6b; width:34px; height:34px; border-radius:50%; font-size:16px; font-weight:800; cursor:pointer; }
+  .yard-deco{ position:absolute; z-index:1; }
+  .yard-house{ position:absolute; left:50%; transform:translateX(-50%); bottom:7%; font-size:66px; z-index:2; filter:drop-shadow(0 6px 6px rgba(60,80,110,.25)); }
+  .sprite{ position:absolute; z-index:3; transition:left 2.6s linear, top 2.6s linear, opacity .6s; }
+  .sprite .spe{ display:block; font-size:40px; line-height:1; filter:drop-shadow(0 4px 4px rgba(60,80,110,.22)); transition:transform .2s; }
+  .sprite.hop{ animation:sphop .5s ease-in-out infinite; }
+  @keyframes sphop{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
+  .sprite .spb{ position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:20px; opacity:0; transition:opacity .3s; }
+  .sprite .spb.on{ opacity:1; }
+  .sprite.me::after{ content:'나'; position:absolute; top:-4px; right:-9px; font-size:9px; font-weight:800; color:#fff; background:var(--fox); border-radius:8px; padding:0 4px; }
+
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important; } }
 
   /* 레벨업 축하 */
@@ -929,7 +944,7 @@ async function currentViewReport(){
   if(!P) return null;
   const keys=await store.list(`report:${P.id}:`);
   let latest=null;
-  for(const k of keys){ const r=await store.get(k); if(r&&(!latest||r.ts>latest.ts)) latest=r; }
+  (await Promise.all(keys.map(k=>store.get(k)))).forEach(r=>{ if(r&&(!latest||r.ts>latest.ts)) latest=r; });
   return latest?{data:latest, when:latest.whenStr||fmtWhen(latest.ts,latest.dateStr), live:false}:null;
 }
 function newChatBtn(){ return `<button class="newchat" onclick="startNewChat()">🆕 새로운 대화 시작하기</button>`; }
@@ -955,7 +970,7 @@ async function collectQuizWords(){
   const map={};
   Object.values(liveVocab).forEach(v=>{ if(v&&v.word&&v.kr) map[v.word.toLowerCase()]={word:v.word,kr:v.kr}; });
   if(P){ const keys=await store.list(`report:${P.id}:`);
-    for(const k of keys){ const r=await store.get(k); if(r&&r.student&&r.student.vocab){ r.student.vocab.forEach(v=>{ if(v&&v.word&&v.kr) map[v.word.toLowerCase()]={word:v.word,kr:v.kr}; }); } }
+    (await Promise.all(keys.map(k=>store.get(k)))).forEach(r=>{ if(r&&r.student&&r.student.vocab){ r.student.vocab.forEach(v=>{ if(v&&v.word&&v.kr) map[v.word.toLowerCase()]={word:v.word,kr:v.kr}; }); } });
   }
   return Object.values(map);
 }
@@ -1072,7 +1087,7 @@ function calcStreak(daysSet){
 function dayKey(ts){ const d=ts?new Date(ts):new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }
 async function profileStats(){
   const keys=await store.list(`report:${P.id}:`);
-  const reports=[]; for(const k of keys){ const r=await store.get(k); if(r) reports.push(r); }
+  const reports=(await Promise.all(keys.map(k=>store.get(k)))).filter(Boolean);
   const words=new Set(); let bestPron=0, maxLevel=levelInfo(P.level||1.6).n; const days=new Set();
   const tk=dayKey(); let todaySessions=0; const todayWords=new Set();
   reports.forEach(r=>{
@@ -1223,7 +1238,7 @@ async function coinBalance(stats,stickerCount){
   return Math.max(0, earned-spent);
 }
 async function loadCoins(){ const stats=await profileStats(); const earned=await updateBadges(stats,false); return coinBalance(stats,earned.length); }
-function closeShop(){ document.getElementById('shopModal').classList.remove('on'); renderAmy(); }
+function closeShop(){ document.getElementById('shopModal').classList.remove('on'); renderAmy(); renderReward(); }   // 상점 닫으면 보상 탭 별 개수 새로고침(불일치 방지)
 async function openShop(){ document.getElementById('shopModal').classList.add('on'); await renderShop(); }
 async function renderShop(){
   const body=document.getElementById('shopBody');
@@ -1264,7 +1279,7 @@ async function renderHistory(){
   const chips=profiles.map(p=>`<button class="pchip ${p.id===histProfileId?'on':''}" data-pid="${p.id}">${p.emoji} ${esc(p.name)}</button>`).join('');
   const keys=await store.list(`report:${histProfileId}:`);
   const items=[];
-  for(const k of keys){ const r=await store.get(k); if(r) items.push(r); }
+  (await Promise.all(keys.map(k=>store.get(k)))).forEach(r=>{ if(r) items.push(r); });
   items.sort((a,b)=>b.ts-a.ts);
   const listHTML = items.length
     ? items.map(r=>`<div class="hitem" data-ts="${r.ts}"><div><div class="hdate">${esc(r.whenStr||fmtWhen(r.ts,r.dateStr))}</div><div class="hsub">${r.pron?'🎙️ '+r.pron.avg+'점 · ':''}${(r.student&&r.student.vocab?r.student.vocab.length:0)}개 단어</div></div><div class="hlv">${esc(r.levelLabel||'')}</div><div class="hdel" data-del="${r.ts}">🗑️</div></div>`).join('')
