@@ -648,7 +648,7 @@ function speak(t,fromAmy){
   u.onerror=()=>{ setSpeaking(false); if(fromAmy){ amySpeaking=false; afterAmy(); } };
   speechSynthesis.speak(u);
 }
-function afterAmy(){ if(continuousMode && recMode==='chat' && !awaitingReply) startListen(); }
+function afterAmy(){ if(continuousMode && recMode==='chat' && !awaitingReply) setTimeout(()=>{ if(continuousMode && recMode==='chat' && !awaitingReply && !amySpeaking) startListen(); },450); }   // Juny 말끝 에코·겹침 방지 텀
 
 /* ============ 채팅 렌더 ============ */
 const chat=document.getElementById('chat'), txt=document.getElementById('txt'), hint=document.getElementById('hint');
@@ -1344,7 +1344,7 @@ document.getElementById('closeSheet').onclick=()=>document.getElementById('profi
 /* ============ 음성 인식 ============ */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const mic=document.getElementById('mic'), convoBtn=document.getElementById('convoBtn');
-let recog=null;
+let recog=null, lastConf=0;   // lastConf: 마지막 인식 신뢰도(잡음 걸러내기용)
 function startListen(){
   if(!SR||recording||amySpeaking||awaitingReply||recMode==='pron') return;
   recMode='chat'; try{ recog.start(); recording=true; mic.classList.add('rec'); hint.textContent=continuousMode?'🔴 계속 대화 중 · 말하면 자동으로 전달돼요':'🔴 듣고 있어요... 영어로 말해보세요!'; }catch(e){}
@@ -1353,12 +1353,25 @@ function stopListen(){ try{ if(recog) recog.stop(); }catch(e){} }
 function resumeIfContinuous(){ if(continuousMode && recMode==='chat' && !amySpeaking && !awaitingReply) setTimeout(startListen,300); }
 
 if(SR){
-  recog=new SR(); recog.lang='en-US'; recog.interimResults=false; recog.maxAlternatives=1;
-  recog.onresult=e=>{ const t=e.results[0][0].transcript; if(recMode==='pron'){ showPronResult(t); } else { txt.value=t; } };
+  recog=new SR(); recog.lang='en-US'; recog.interimResults=false; recog.maxAlternatives=3;
+  recog.onresult=e=>{
+    const alts=e.results[0]; let best=alts[0];
+    for(let i=1;i<alts.length;i++){ if((alts[i].confidence||0)>(best.confidence||0)) best=alts[i]; }  // 후보 중 가장 확신도 높은 것
+    const t=((best&&best.transcript)||'').trim(); lastConf=(best&&best.confidence)||0;
+    if(recMode==='pron'){ showPronResult(t); } else { txt.value=t; }
+  };
   recog.onend=()=>{
     if(recMode==='pron'){ recMode='chat'; return; }
     recording=false; mic.classList.remove('rec');
-    if(txt.value.trim()){ submit(); return; }               // 말한 게 있으면 자동 전송
+    const said=txt.value.trim();
+    // 잡음/불명확 추정: 너무 짧거나(1글자) 신뢰도가 뚜렷하게 낮으면 버림 (다른 사람 말·소음 섞임 방지)
+    const noisy = said && (said.length<2 || (lastConf>0 && lastConf<0.35));
+    if(said && !noisy){ submit(); return; }                 // 명확하면 자동 전송
+    if(noisy){                                               // 잡음으로 보이면 버리고 다시 듣기
+      txt.value='';
+      if(continuousMode && !amySpeaking && !awaitingReply){ hint.textContent='🤔 잘 안 들렸어요 · 조용한 곳에서 또박또박 말해줄래요?'; startListen(); return; }
+      hint.textContent='🤔 잘 안 들렸어요 · 🎤 버튼 누르고 또박또박 다시 말해봐요'; return;
+    }
     if(continuousMode && !amySpeaking && !awaitingReply){ startListen(); return; } // 침묵이면 계속 듣기
     hint.textContent='🎤 버튼을 누르고 영어로 대답해보세요';
   };
