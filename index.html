@@ -1391,8 +1391,9 @@ if(SR){
   await loadProfiles();
   backupLocalToServer();   // 이 기기 데이터를 서버로 백업(빈 칸만 채움, 백그라운드)
   renderParent(); renderStudent();
-  if(!profiles.length){ renderProfileSheet(); document.getElementById('profileSheet').classList.add('on'); }
-  else { const id=(activeId&&profiles.find(p=>p.id===activeId))?activeId:profiles[0].id; await selectProfile(id); }
+  // 켤 때마다 프로필 선택 화면을 먼저 보여줌 → 저장된 학생을 고르거나, 새로 추가해서 시작
+  renderProfileSheet();
+  document.getElementById('profileSheet').classList.add('on');
 })();
 </script>
 </body>
