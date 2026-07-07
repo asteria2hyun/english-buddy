@@ -974,12 +974,14 @@ async function aiQuiz(words){
   const picked=shuffleArr(words).slice(0,8);
   const listStr=picked.map(w=>`- ${w.word} (${w.kr})`).join('\n');
   const seed=Math.floor(Math.random()*100000);
-  const lvl=levelInfo(levelEMA).n, _cu=curInfo();   // 레벨(1~5)·현재 단계에 맞춰 난이도 조절
-  const diff = lvl<=2
-    ? `She is a BEGINNER (level ${lvl}/5, age ${childAge}, ${_cu.cefr}). Make it EASY and encouraging — the correct answer should be findable. Wrong options are real but CLEARLY DIFFERENT in meaning from the answer (do NOT use tricky near-synonyms or subtle traps). Prefer "meaning" and "def". Keep every option short and very simple.`
-    : lvl===3
-    ? `She is at level ${lvl}/5 (age ${childAge}, ${_cu.cefr}). MEDIUM difficulty — wrong options are the same part of speech and loosely related, but still tellable apart with a little thought. Avoid very subtle traps.`
-    : `She is fairly strong (level ${lvl}/5, age ${childAge}, ${_cu.cefr}). Make it a real CHALLENGE — wrong options are the SAME category and confusable (예: 감정어의 오답도 다른 감정어), so she must think carefully.`;
+  const lvl=levelInfo(levelEMA).n, _cu=curInfo();
+  // 난이도: 어린 아이(≤7살)는 항상 쉽게, 그 외엔 나이·레벨에 따라 (어린 Jiho는 쉽게, 큰 아이는 어렵게)
+  const tier = childAge<=7 ? 'easy' : (childAge<=9 ? (lvl>=4?'hard':'medium') : (lvl<=2?'medium':'hard'));
+  const diff = tier==='easy'
+    ? `She is a YOUNG beginner (age ${childAge}, level ${lvl}/5). Make it EASY and encouraging — the correct answer should be easy to find. Wrong options are real but CLEARLY DIFFERENT in meaning (NO tricky near-synonyms, NO subtle traps). Prefer "meaning" and "def". Keep every option short and very simple.`
+    : tier==='medium'
+    ? `Age ${childAge}, level ${lvl}/5 (${_cu.cefr}). MEDIUM difficulty — wrong options are the same part of speech and loosely related, tellable apart with a little thought. Avoid very subtle traps.`
+    : `Age ${childAge}, level ${lvl}/5 (${_cu.cefr}). Make it a real CHALLENGE — wrong options are the SAME category and confusable (예: 감정어의 오답도 다른 감정어), so she must think carefully.`;
   const system=`You make a fun English vocabulary quiz for a ${childAge}-year-old Korean learner, MATCHED to her level. Words she has learned:
 ${listStr}
 
