@@ -675,7 +675,7 @@ function rmTyping(){ const t=document.getElementById('typing'); if(t)t.remove();
 async function talk(userText){
   awaitingReply=true;
   addMe(userText); apiMessages.push({role:'user',content:userText}); turnCount++; addTyping();
-  const target=levelInfo(levelEMA).n, stretch=(turnCount%4===0);
+  const target=levelInfo(levelEMA).n, stretch=(turnCount%4===0), askBack=(turnCount%4===2);
   const askedNote=pendingStarter?`You just asked her: "${pendingStarter}". She is answering it.`:"";
   const memNote=profileMemory?`\nMEMORY from your past chats with her (use ONE of these naturally to build continuity when it fits, e.g. ask a warm follow-up about something she mentioned before — do NOT list them and don't force it every turn): ${profileMemory}`:"";
   const scenarioNote=activeScenario?`\nROLE-PLAY SCENE: ${activeScenario.sys} Stay in character and keep the scene going, but still keep language simple for her level and end with one open-ended question.`:"";
@@ -694,8 +694,9 @@ STYLE:
 CONTEXT & FLOW (very important — be a real friend who is listening, NOT a question machine):
 - React to what she ACTUALLY said and the moment. Respond to the situation first; only then maybe ask.
 - If she is saying goodbye or leaving (e.g. "bye", "byebye", "I have to go", "I'm going to school", "가야 해", "그만할래"), warmly say goodbye back and DO NOT ask a new question — let the chat end nicely (e.g. "Bye! Have fun at school! See you next time! 👋").
-- If she asks YOU a question, answer it kindly first.
+- If she asks YOU a question, answer it warmly in 1 simple sentence; if her question had a mistake, gently model the correct question form too (e.g. "You can ask: What is your favorite color?").
 - If she seems tired, confused, or changes the subject, follow her lead. Never ignore the situation just to force in a question.
+${askBack?'- TURN-TAKING (do this THIS turn): instead of asking her another question, warmly INVITE her to ask YOU a question — e.g. "Now it\'s your turn — ask ME a question!" This lets her practice ASKING, not only answering.':'- Now and then let HER be the one who asks: occasionally invite her to ask you a question so she practices making questions, not just answering them.'}
 ${stretch?'- CHALLENGE: this turn, gently include ONE slightly harder word or a bit longer sentence to help her grow, kept understandable.':''}
 - If she made a mistake, model the correct sentence gently.
 FULL-SENTENCE COACHING (important):
