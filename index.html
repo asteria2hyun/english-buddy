@@ -318,13 +318,16 @@
   .yard-deco{ position:absolute; z-index:1; }
   .yard-house{ position:absolute; left:50%; transform:translateX(-50%); bottom:7%; font-size:66px; z-index:2; filter:drop-shadow(0 6px 6px rgba(60,80,110,.25)); }
   .sprite{ position:absolute; z-index:3; transition:left 2.6s linear, top 2.6s linear, opacity .6s; }
-  .sprite .spe{ display:block; font-size:40px; line-height:1; filter:drop-shadow(0 4px 4px rgba(60,80,110,.22)); transition:transform .2s; }
-  .sprite.hop{ animation:sphop .5s ease-in-out infinite; }
-  @keyframes sphop{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
-  .sprite .spb{ position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:20px; opacity:0; transition:opacity .3s; }
+  .sprite::before{ content:''; position:absolute; left:50%; bottom:-4px; transform:translateX(-50%); width:62%; height:6px; background:rgba(50,70,100,.16); border-radius:50%; filter:blur(1px); z-index:-1; animation:shwob 2.4s ease-in-out infinite; }
+  @keyframes shwob{ 0%,100%{ transform:translateX(-50%) scale(1) } 50%{ transform:translateX(-50%) scale(.82) } }
+  .sprite .spe{ display:block; font-size:40px; line-height:1; filter:drop-shadow(0 4px 3px rgba(60,80,110,.18)); transition:transform .2s; }
+  .sprite .spwrap{ position:relative; display:inline-block; transform-origin:50% 90%; animation:spidle 2.4s ease-in-out infinite; }   /* 상시 살아있는 뒤뚱임 */
+  @keyframes spidle{ 0%,100%{ transform:translateY(0) rotate(-3deg) } 50%{ transform:translateY(-3px) rotate(3deg) } }
+  .sprite.hop .spwrap{ animation:sphop .5s ease-in-out infinite; }
+  @keyframes sphop{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  .sprite .spb{ position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:20px; opacity:0; transition:opacity .3s; z-index:2; }
   .sprite .spb.on{ opacity:1; }
   .sprite.me::after{ content:'나'; position:absolute; top:-4px; right:-9px; font-size:9px; font-weight:800; color:#fff; background:var(--fox); border-radius:8px; padding:0 4px; z-index:5; }
-  .sprite .spwrap{ position:relative; display:inline-block; }
   .sprite .sacc{ position:absolute; left:50%; transform:translateX(-50%); line-height:1; pointer-events:none; }
   .sprite .sacc.hat{ top:-13px; font-size:20px; } .sprite .sacc.face{ top:9px; font-size:15px; } .sprite .sacc.neck{ bottom:-5px; font-size:17px; } .sprite .sacc.buddy{ left:auto; right:-13px; top:5px; transform:none; font-size:16px; }
   @keyframes cloudmove{ 0%{transform:translateX(0)} 100%{transform:translateX(70px)} }
@@ -1272,7 +1275,7 @@ async function coinBalance(stats,stickerCount){
   return Math.max(0, earned-spent);
 }
 async function loadCoins(){ const stats=await profileStats(); const earned=await updateBadges(stats,false); return coinBalance(stats,earned.length); }
-function closeShop(){ document.getElementById('shopModal').classList.remove('on'); renderAmy(); renderReward(); }   // 상점 닫으면 보상 탭 별 개수 새로고침(불일치 방지)
+function closeShop(){ document.getElementById('shopModal').classList.remove('on'); renderAmy(); syncYard(); renderReward(); }   // 상점 닫으면 캐릭터/별 개수 갱신
 async function openShop(){ document.getElementById('shopModal').classList.add('on'); await renderShop(); }
 async function renderShop(){
   const body=document.getElementById('shopBody');
@@ -1296,13 +1299,13 @@ async function buyItem(id){
   const spent=(await store.get('coinspent:'+P.id))||0; await store.set('coinspent:'+P.id, spent+it.price);
   owned.push(id); await store.set('owned:'+P.id, owned);
   amyOutfit[it.cat]=id; await store.set('amyOutfit:'+P.id, amyOutfit);   // 산 즉시 착용
-  renderAmy(); await renderShop(); celebrate(it.emoji,'GET! 🎁',`<b>${esc(it.name)}</b> 을(를) 얻었어요!`);
+  renderAmy(); syncYard(); await renderShop(); celebrate(it.emoji,'GET! 🎁',`<b>${esc(it.name)}</b> 을(를) 얻었어요!`);
 }
 async function equipItem(id){
   const it=ITEMS.find(x=>x.id===id); if(!it||!P) return;
   amyOutfit[it.cat] = (amyOutfit[it.cat]===id)?null:id;   // 다시 누르면 벗기
   await store.set('amyOutfit:'+P.id, amyOutfit);
-  renderAmy(); await renderShop();
+  renderAmy(); syncYard(); await renderShop();
 }
 
 /* ============ 기록 ============ */
@@ -1408,17 +1411,20 @@ async function selectProfile(id){
     if(lock && lock.s && lock.s!==sessionId && (Date.now()-(lock.ts||0) < 35000)){
       if(!confirm(`${prof.name}은(는) 지금 다른 기기에서 쓰고 있어요.\n여기서 사용하면 그 기기는 멈춰요. 계속할까요?`)) return;
     }
-    await store.set('active:'+id, {s:sessionId, ts:Date.now()});
+    store.set('active:'+id, {s:sessionId, ts:Date.now()});   // 락 (기다리지 않음)
   }catch(e){}
-  activeId=id; await store.set('activeId',id); P=prof;
+  activeId=id; store.set('activeId',id); P=prof;
   childName=P.name; childAge=P.age||10; levelEMA=P.level||1.6;
-  const _m=(await store.get('memory:'+P.id))||[]; profileMemory=_m.slice(-6).join(' ');   // 과거 대화 기억 로드
-  srsMap=(await store.get('srs:'+P.id))||{};   // 어휘 간격반복 상태 로드
-  weakList=(await store.get('weak:'+P.id))||[];   // 반복 약점 로드
-  const _cu=await store.get('curriculum:'+P.id);
-  if(_cu&&_cu.step){ curStep=_cu.step; } else { curStep=startStepForAge(childAge); store.set('curriculum:'+P.id,{step:curStep}); }   // 저장된 단계 없으면 나이에 맞게 시작
+  const [_m,_srs,_weak,_cu,_outfit]=await Promise.all([   // 프로필 데이터 한 번에 병렬 로드(로딩 단축)
+    store.get('memory:'+P.id), store.get('srs:'+P.id), store.get('weak:'+P.id),
+    store.get('curriculum:'+P.id), store.get('amyOutfit:'+P.id)
+  ]);
+  profileMemory=(_m||[]).slice(-6).join(' ');   // 과거 대화 기억
+  srsMap=_srs||{};   // 어휘 간격반복
+  weakList=_weak||[];   // 반복 약점
+  if(_cu&&_cu.step){ curStep=_cu.step; } else { curStep=startStepForAge(childAge); store.set('curriculum:'+P.id,{step:curStep}); }   // 저장된 단계 없으면 나이에 맞게
   histProfileId=P.id;   // 기록 탭 기본 = 현재 프로필
-  amyOutfit=(await store.get('amyOutfit:'+P.id))||{}; renderAmy();   // Amy 꾸미기 로드
+  amyOutfit=_outfit||{}; renderAmy();   // 꾸미기
   document.getElementById('hAvatar').textContent=P.emoji;
   document.getElementById('hName').textContent=P.name;
   updateBadge(); resetSession();
@@ -1538,12 +1544,12 @@ function clearYardChars(){ Object.values(yardChars).forEach(c=>{ try{ c.el.remov
 function ensureChar(id,emoji,outfit,isMe){
   const y=getYardEl(); if(!y||!id) return;
   const c=yardChars[id];
-  if(c){ if(c.emoji!==emoji || JSON.stringify(c.outfit||{})!==JSON.stringify(outfit||{})){ c.emoji=emoji; c.outfit=outfit; c.el.innerHTML=spriteInner(emoji,outfit); } return; }
+  if(c){ if(c.emoji!==emoji || JSON.stringify(c.outfit||{})!==JSON.stringify(outfit||{})){ c.emoji=emoji; c.outfit=Object.assign({},outfit); c.el.innerHTML=spriteInner(emoji,outfit); } return; }
   const el=document.createElement('div'); el.className='sprite'+(isMe?' me':'');
   el.innerHTML=spriteInner(emoji,outfit);
   el.style.left=(10+Math.random()*78)+'%'; el.style.top=(44+Math.random()*40)+'%';
   y.appendChild(el);
-  yardChars[id]={id,emoji,outfit,el,me:isMe};
+  yardChars[id]={id,emoji,outfit:Object.assign({},outfit),el,me:isMe};
 }
 function removeChar(id){ const c=yardChars[id]; if(c){ c.el.remove(); delete yardChars[id]; } }
 function syncYard(){
