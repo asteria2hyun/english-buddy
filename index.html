@@ -322,7 +322,11 @@
   @keyframes sphop{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-9px)} }
   .sprite .spb{ position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:20px; opacity:0; transition:opacity .3s; }
   .sprite .spb.on{ opacity:1; }
-  .sprite.me::after{ content:'나'; position:absolute; top:-4px; right:-9px; font-size:9px; font-weight:800; color:#fff; background:var(--fox); border-radius:8px; padding:0 4px; }
+  .sprite.me::after{ content:'나'; position:absolute; top:-4px; right:-9px; font-size:9px; font-weight:800; color:#fff; background:var(--fox); border-radius:8px; padding:0 4px; z-index:5; }
+  .sprite .spwrap{ position:relative; display:inline-block; }
+  .sprite .sacc{ position:absolute; left:50%; transform:translateX(-50%); line-height:1; pointer-events:none; }
+  .sprite .sacc.hat{ top:-13px; font-size:20px; } .sprite .sacc.face{ top:9px; font-size:15px; } .sprite .sacc.neck{ bottom:-5px; font-size:17px; } .sprite .sacc.buddy{ left:auto; right:-13px; top:5px; transform:none; font-size:16px; }
+  @keyframes cloudmove{ 0%{transform:translateX(0)} 100%{transform:translateX(70px)} }
 
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important; } }
 
@@ -427,6 +431,9 @@
 
   <!-- 별 상점 (Amy 꾸미기) -->
   <div class="overlay pcenter" id="shopModal"><div class="pmodal" id="shopBody"></div></div>
+
+  <!-- 🏡 마당 (접속 캐릭터 놀이 씬) -->
+  <div class="overlay pcenter" id="yardModal"><div class="yard" id="yard"></div></div>
 
   <!-- 레벨업 축하 -->
   <div class="levelup" id="levelup"><div class="lu-card"><div class="lu-badge" id="luBadge">🌿</div><div class="lu-title" id="luTitle">LEVEL UP!</div><div class="lu-sub" id="luSub"></div></div></div>
@@ -1135,6 +1142,7 @@ async function renderReward(){
     <div class="rhead"><div class="r-emoji">🏆</div><div><h2 class="display">${esc(childName)}의 보상</h2><div class="date">⭐ 스티커 ${total}개 · 🔥 ${stats.streak}일 연속</div></div></div>
     ${missionCard}
     <div class="card b"><div class="lbl">⭐ 별 상점 · Juny 꾸미기</div><div class="coinrow"><div class="coinnum">⭐ ${coin}</div><button class="quizbtn" style="width:auto;margin:0;padding:11px 18px" onclick="openShop()">🛍️ 상점 열기</button></div><div class="sub2" style="margin-top:6px">별을 모아 Juny에게 모자·안경·배경을 선물해요!</div></div>
+    <div class="card g"><div class="lbl">🏡 마당</div><div class="sub2" style="margin-bottom:8px">내 캐릭터가 아이템을 쓰고 돌아다니며 놀아요. 친구가 접속하면 같이!</div><button class="quizbtn" style="margin:0;background:linear-gradient(135deg,#BFE3FF,#8FC7F5);color:#194b73;box-shadow:0 4px 0 rgba(143,199,245,.5)" onclick="openYard()">🏡 마당에서 놀기</button></div>
     <div class="card a"><div class="lbl">🔥 연속 출석</div><div class="streakbig">${stats.streak}일 연속!</div><div class="sub2">매일 대화하면 불꽃이 커져요</div></div>
     <div class="card g"><div class="lbl">🌳 나의 정원 · 대화 ${stats.sessions}번</div><div class="garden">${garden}</div></div>
     <div class="card b"><div class="lbl">🎮 게임 놀이터</div>
@@ -1379,6 +1387,7 @@ async function selectProfile(id){
   updateBadge(); resetSession();
   document.getElementById('profileSheet').classList.remove('on');
   document.querySelector('.tab[data-v="chat"]').click();
+  startPresence();   // 접속 알림 + 마당 동기화 시작
 }
 function resetSession(){
   apiMessages=[]; sessionLog=[]; liveVocab={}; pronScores=[]; turnCount=0; reportsData=null; memorySaved=false; currentReportTs=null; activeScenario=null;
@@ -1453,6 +1462,76 @@ if(SR){
   mic.onclick=()=>{ hint.textContent='이 브라우저는 음성인식을 지원하지 않아요. Chrome/웨일에서 열어주세요!'; };
   convoBtn.onclick=()=>{ hint.textContent='이 브라우저는 음성인식을 지원하지 않아요. Chrome/웨일에서 열어주세요!'; };
 }
+
+/* ============ 접속 프레즌스 + 🏡 마당 ============ */
+let presenceBeatT=null, presencePollT=null, yardOpen=false, yardChars={}, yardTickT=null, yardList=[];
+async function presenceBeat(){ if(!P||document.hidden) return; try{ await fetch('/api/presence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:P.id, emoji:P.emoji||'🦊', outfit:amyOutfit||{}})}); }catch(e){} }
+async function presencePoll(){ if(document.hidden) return; try{ const r=await fetch('/api/presence'); const d=await r.json(); yardList=(d&&d.list)||[]; if(yardOpen) syncYard(); }catch(e){} }
+function startPresence(){ clearInterval(presenceBeatT); clearInterval(presencePollT); presenceBeat(); presencePoll(); presenceBeatT=setInterval(presenceBeat,15000); presencePollT=setInterval(presencePoll,15000); }
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ presenceBeat(); presencePoll(); } });
+
+function spriteInner(emoji,outfit){ const o=outfit||{}; let acc='';
+  if(o.hat) acc+=`<span class="sacc hat">${itemEmoji(o.hat)}</span>`;
+  if(o.face) acc+=`<span class="sacc face">${itemEmoji(o.face)}</span>`;
+  if(o.neck) acc+=`<span class="sacc neck">${itemEmoji(o.neck)}</span>`;
+  if(o.buddy) acc+=`<span class="sacc buddy">${itemEmoji(o.buddy)}</span>`;
+  return `<span class="spb"></span><span class="spwrap"><span class="spe">${emoji||'🦊'}</span>${acc}</span>`;
+}
+const YARD_ACTS=['🎈','🍎','⚽','🎵','💤','🐛','🌸','🪁','🍭','📖','🎨','🧃','🎮','🏀'];
+function ensureChar(id,emoji,outfit,isMe){
+  const y=document.getElementById('yard'); if(!y||!id) return;
+  const c=yardChars[id];
+  if(c){ if(c.emoji!==emoji || JSON.stringify(c.outfit||{})!==JSON.stringify(outfit||{})){ c.emoji=emoji; c.outfit=outfit; c.el.innerHTML=spriteInner(emoji,outfit); } return; }
+  const el=document.createElement('div'); el.className='sprite'+(isMe?' me':'');
+  el.innerHTML=spriteInner(emoji,outfit);
+  el.style.left=(10+Math.random()*78)+'%'; el.style.top=(44+Math.random()*40)+'%';
+  y.appendChild(el);
+  yardChars[id]={id,emoji,outfit,el,me:isMe};
+}
+function removeChar(id){ const c=yardChars[id]; if(c){ c.el.remove(); delete yardChars[id]; } }
+function syncYard(){
+  const ids=new Set();
+  if(P){ ids.add(P.id); ensureChar(P.id, P.emoji||'🦊', amyOutfit, true); }
+  (yardList||[]).forEach(x=>{ ids.add(x.id); ensureChar(x.id, x.emoji, x.outfit, P&&x.id===P.id); });
+  Object.keys(yardChars).forEach(id=>{ if(!ids.has(id)) removeChar(id); });
+}
+function yardTick(){
+  if(!yardOpen) return;
+  Object.values(yardChars).forEach(c=>{
+    const el=c.el, spe=el.querySelector('.spe'), r=Math.random();
+    if(r<0.30){                                   // 활동(먹기·놀기·잠 등) + 깡총
+      const b=el.querySelector('.spb'); if(b){ b.textContent=YARD_ACTS[Math.floor(Math.random()*YARD_ACTS.length)]; b.classList.add('on'); }
+      el.classList.add('hop'); setTimeout(()=>{ if(b) b.classList.remove('on'); el.classList.remove('hop'); },2000);
+    } else if(r<0.42){                            // 빙글 돌기(춤)
+      if(spe){ spe.style.transition='transform .6s'; spe.style.transform='rotate(360deg)'; setTimeout(()=>{ spe.style.transition='transform .2s'; spe.style.transform=''; },650); }
+    } else if(r<0.52){                            // 집에 들어갔다 나오기
+      el.style.left='50%'; el.style.top='70%';
+      setTimeout(()=>{ el.style.opacity='0'; },2500);
+      setTimeout(()=>{ el.style.left=(15+Math.random()*68)+'%'; el.style.top=(44+Math.random()*36)+'%'; el.style.opacity='1'; },4600);
+    } else {                                      // 걷기(방향 전환)
+      const cur=parseFloat(el.style.left)||50, nx=8+Math.random()*80, ny=42+Math.random()*44;
+      if(spe) spe.style.transform='scaleX('+(nx>cur?1:-1)+')';
+      el.style.left=nx+'%'; el.style.top=ny+'%';
+    }
+  });
+}
+function openYard(){
+  const modal=document.getElementById('yardModal'), y=document.getElementById('yard');
+  yardChars={}; yardOpen=true; modal.classList.add('on');
+  y.innerHTML=`<div class="yard-top"><span class="t">🏡 마당 · 함께 놀기</span><button class="yard-x" id="yardX">✕</button></div>
+    <span class="yard-deco" style="top:14px;left:20px;font-size:30px">☀️</span>
+    <span class="yard-deco" style="top:22px;right:70px;font-size:24px;animation:cloudmove 9s ease-in-out infinite alternate">☁️</span>
+    <span class="yard-deco" style="left:9%;bottom:6%;font-size:26px">🌳</span>
+    <span class="yard-deco" style="right:9%;bottom:5%;font-size:22px">🌷</span>
+    <span class="yard-deco" style="right:22%;bottom:9%;font-size:18px">🌼</span>
+    <div class="yard-house">🏠</div>`;
+  document.getElementById('yardX').onclick=closeYard;
+  if(P) ensureChar(P.id, P.emoji||'🦊', amyOutfit, true);
+  (yardList||[]).forEach(x=>{ if(!P||x.id!==P.id) ensureChar(x.id, x.emoji, x.outfit, false); });
+  presencePoll();
+  clearInterval(yardTickT); yardTickT=setInterval(yardTick,2600); setTimeout(yardTick,400);
+}
+function closeYard(){ yardOpen=false; document.getElementById('yardModal').classList.remove('on'); clearInterval(yardTickT); }
 
 /* ============ 시작 ============ */
 (async function init(){
