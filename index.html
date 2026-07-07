@@ -1266,8 +1266,9 @@ async function reconstructProfiles(existingIds){
   const out=[];
   for(const id of found){
     if(existingIds.has(id)) continue;
-    let name='친구', emoji='🦊', level=1.6;
-    try{ const rk=(await store.list('report:'+id+':')).sort(); if(rk.length){ const r=await store.get(rk[rk.length-1]); if(r){ name=r.name||name; level=r.levelNum||level; } } }catch(e){}
+    let name=null, emoji='🦊', level=1.6;
+    try{ const rk=(await store.list('report:'+id+':')).sort(); if(rk.length){ const r=await store.get(rk[rk.length-1]); if(r){ name=r.name||null; level=r.levelNum||level; } } }catch(e){}
+    if(!name) continue;   // 이름 있는 진짜 보고서가 있을 때만 복구 → 남은 memory/badges 잔재로 '친구' 유령이 생기지 않게
     out.push({id,name,emoji,level,created:parseInt(String(id).replace(/\D/g,''),10)||0});
   }
   return out;
@@ -1296,6 +1297,8 @@ function renderProfileSheet(){
 }
 async function deleteProfile(id){
   const keys=await store.list(`report:${id}:`); for(const k of keys) await store.del(k);
+  // 이 학생의 나머지 데이터 키도 모두 정리 → 잔재로 유령 프로필이 되살아나지 않게
+  for(const pre of ['memory:','badges:','srs:','weak:','curriculum:','quizday:','missionday:','quizbest:','coinbonus:','coinspent:','owned:','amyOutfit:']) await store.del(pre+id);
   profiles=profiles.filter(p=>p.id!==id); await saveProfiles();
   if(activeId===id){ activeId=null; P=null; }
   renderProfileSheet(); if(profiles.length===0){ document.getElementById('profileSheet').classList.add('on'); }
