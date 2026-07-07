@@ -21,7 +21,7 @@
   html,body{ height:100%; }
   body{ font-family:'Nunito',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--sky); color:var(--ink); display:flex; justify-content:center; }
   .display{ font-family:'Baloo 2','Nunito',sans-serif; }
-  .app{ width:100%; max-width:540px; height:100dvh; display:flex; flex-direction:column; background:var(--sky); position:relative; overflow:hidden; }
+  .app{ width:100%; max-width:540px; height:100vh; height:100dvh; display:flex; flex-direction:column; background:var(--sky); position:relative; overflow:hidden; }
 
   header{ padding:11px 14px; display:flex; align-items:center; gap:10px; background:var(--cloud); border-bottom:1px solid var(--line); }
   .avatar{ width:44px; height:44px; border-radius:50%; background:var(--fox-soft); display:grid; place-items:center; font-size:24px; flex:0 0 auto; cursor:pointer; box-shadow:0 3px 0 rgba(240,138,93,.2); }
@@ -66,8 +66,8 @@
   .b-hear{ background:var(--sun); color:#6b4b12; } .b-new{ background:#fff; color:var(--amber); border:1.5px solid var(--sun) !important; }
 
   /* 가운데 스크롤 영역: 질문·캐릭터·대화가 함께 스크롤, 입력창은 항상 하단 고정 */
-  .chatscroll{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; }
-  .chat{ flex:1 1 auto; padding:13px 13px 6px; display:flex; flex-direction:column; gap:12px; }
+  .chatscroll{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; }
+  .chat{ flex:1 1 auto; margin-top:auto; padding:13px 13px 6px; display:flex; flex-direction:column; gap:12px; }
   .row{ display:flex; gap:8px; align-items:flex-end; max-width:90%; }
   .row.me{ align-self:flex-end; flex-direction:row-reverse; }
   .mini{ width:29px; height:29px; border-radius:50%; display:grid; place-items:center; font-size:15px; flex:0 0 auto; }
@@ -91,7 +91,7 @@
   @keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
 
   /* Amy 말하는 무대 (음성 회화용) */
-  .amystage{ display:flex; flex-direction:column; align-items:center; gap:5px; padding:14px 0 4px; }
+  .amystage{ margin-top:auto; display:flex; flex-direction:column; align-items:center; gap:5px; padding:14px 0 4px; }
   .afox{ font-size:52px; line-height:1; filter:drop-shadow(0 5px 6px rgba(240,138,93,.28)); }
   .amystage.speaking .afox-wrap{ animation:foxtalk .5s ease-in-out infinite; }
   @keyframes foxtalk{ 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-6px) rotate(3deg)} }
@@ -107,19 +107,32 @@
   /* 태블릿/PC: 가운데 카드처럼 보기 좋게 */
   @media (min-width:600px){
     body{ align-items:center; }
-    .app{ height:96dvh; max-height:900px; border-radius:22px; box-shadow:0 12px 40px rgba(60,80,110,.16); overflow:hidden; }
+    .app{ height:96vh; height:96dvh; max-height:900px; border-radius:22px; box-shadow:0 12px 40px rgba(60,80,110,.16); overflow:hidden; }
   }
-  /* 화면이 낮을 때(작은 폰·가로): 말하는 캐릭터 영역 축소해 대화 공간 확보 */
+  /* 화면이 낮을 때(태블릿 가로·작은 폰): 캐릭터를 숨기지 않고 배너·질문·힌트를 컴팩트하게 → 캐릭터+입력창 모두 보이게. 높이 기준만 사용(orientation 금지) */
+  @media (max-height:740px){
+    .curbar{ padding:6px 12px; }
+    .cur-goal{ display:none; }
+    .cur-bar{ height:4px; margin-top:5px; }
+    .scenarios{ padding:6px 12px; }
+    .sc-chip{ padding:6px 11px; font-size:12px; }
+    .starter{ padding:9px 13px; margin:8px 12px 0; }
+    .starter .cap{ font-size:10.5px; }
+    .hint{ display:none; }
+  }
   @media (max-height:620px){
     .amystage{ padding:6px 0 2px; gap:2px; }
     .afox{ font-size:34px; } .afox-wrap{ width:44px; height:44px; }
     .awave{ height:13px; } .astatus{ font-size:11px; }
-    .starter{ padding:9px 13px; margin:8px 12px 0; }
+    .starter{ padding:8px 12px; margin:6px 12px 0; }
   }
-  /* 가로모드 좁은 화면: 캐릭터 무대 숨기고 대화에 집중 */
-  @media (orientation:landscape) and (max-height:460px){
-    .amystage{ display:none; }
-    .starter{ margin:6px 12px 0; }
+  /* 아주 낮은 화면: 여우를 가로 한 줄로 눕혀서 유지(절대 숨기지 않음) */
+  @media (max-height:460px){
+    .amystage{ flex-direction:row; justify-content:center; gap:8px; padding:4px 0 2px; }
+    .afox{ font-size:24px; } .afox-wrap{ width:30px; height:30px; }
+    .awave{ height:10px; } .astatus{ font-size:11px; }
+    .cur-title{ font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .starter{ margin:5px 12px 0; }
   }
   /* 음성 메시지 버블 (영어 텍스트 숨김) */
   .bubble.voice .vmrow{ display:flex; align-items:center; gap:9px; }
