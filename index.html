@@ -66,7 +66,8 @@
   .b-hear{ background:var(--sun); color:#6b4b12; } .b-new{ background:#fff; color:var(--amber); border:1.5px solid var(--sun) !important; }
 
   /* 가운데 스크롤 영역: 질문·캐릭터·대화가 함께 스크롤, 입력창은 항상 하단 고정 */
-  .chatscroll{ flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; }
+  .chatscroll{ position:relative; flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; }
+  .chatscroll > .starter, .chatscroll > .amystage, .chatscroll > .chat, .chatscroll > .finish-wrap{ position:relative; z-index:1; }
   .chat{ flex:1 1 auto; margin-top:auto; padding:13px 13px 6px; display:flex; flex-direction:column; gap:12px; }
   .row{ display:flex; gap:8px; align-items:flex-end; max-width:90%; }
   .row.me{ align-self:flex-end; flex-direction:row-reverse; }
@@ -327,6 +328,10 @@
   .sprite .sacc{ position:absolute; left:50%; transform:translateX(-50%); line-height:1; pointer-events:none; }
   .sprite .sacc.hat{ top:-13px; font-size:20px; } .sprite .sacc.face{ top:9px; font-size:15px; } .sprite .sacc.neck{ bottom:-5px; font-size:17px; } .sprite .sacc.buddy{ left:auto; right:-13px; top:5px; transform:none; font-size:16px; }
   @keyframes cloudmove{ 0%{transform:translateX(0)} 100%{transform:translateX(70px)} }
+  /* 대화 화면에 상시로 보이는 임베디드 마당(캐릭터가 뒤에서 놀고 있음) */
+  .cyard{ position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+  .cyard .sprite .spe{ font-size:30px; }
+  .cyard .sprite.me::after{ font-size:8px; }
 
   @media (prefers-reduced-motion: reduce){ *{ animation:none !important; } }
 
@@ -360,6 +365,7 @@
     <div class="curbar" id="curBar"></div>
     <div class="scenarios" id="scenarios"></div>
     <div class="chatscroll" id="chatScroll">
+    <div class="cyard" id="chatYard"></div>
     <div class="starter" id="starter">
       <div class="cap">🎲 오늘의 질문 · 🔊 듣고 영어로 대답해요</div>
       <div class="q" id="stQ">—</div>
@@ -1490,14 +1496,14 @@ async function presenceBeat(){
   }catch(e){}
 }
 function takenOver(){
-  clearInterval(presenceBeatT); clearInterval(presencePollT);
-  if(yardOpen) closeYard();
+  clearInterval(presenceBeatT); clearInterval(presencePollT); clearInterval(yardTickT);
+  yardOpen=false; document.getElementById('yardModal').classList.remove('on'); clearYardChars();
   P=null; activeId=null;
   alert('앗! 이 학생을 다른 기기에서 켰어요.\n한 학생은 한 기기에서만 쓸 수 있어요. 🙂');
   openSheet();
 }
-async function presencePoll(){ if(document.hidden) return; try{ const r=await fetch('/api/presence'); const d=await r.json(); yardList=(d&&d.list)||[]; if(yardOpen) syncYard(); }catch(e){} }
-function startPresence(){ clearInterval(presenceBeatT); clearInterval(presencePollT); presenceBeat(); presencePoll(); presenceBeatT=setInterval(presenceBeat,15000); presencePollT=setInterval(presencePoll,15000); }
+async function presencePoll(){ if(document.hidden) return; try{ const r=await fetch('/api/presence'); const d=await r.json(); yardList=(d&&d.list)||[]; syncYard(); }catch(e){} }
+function startPresence(){ clearInterval(presenceBeatT); clearInterval(presencePollT); clearInterval(yardTickT); presenceBeat(); presencePoll(); syncYard(); presenceBeatT=setInterval(presenceBeat,15000); presencePollT=setInterval(presencePoll,15000); yardTickT=setInterval(yardTick,2600); setTimeout(yardTick,700); }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ presenceBeat(); presencePoll(); } });
 
 function spriteInner(emoji,outfit){ const o=outfit||{}; let acc='';
@@ -1508,8 +1514,10 @@ function spriteInner(emoji,outfit){ const o=outfit||{}; let acc='';
   return `<span class="spb"></span><span class="spwrap"><span class="spe">${emoji||'🦊'}</span>${acc}</span>`;
 }
 const YARD_ACTS=['🎈','🍎','⚽','🎵','💤','🐛','🌸','🪁','🍭','📖','🎨','🧃','🎮','🏀'];
+function getYardEl(){ return yardOpen ? document.getElementById('yard') : document.getElementById('chatYard'); }   // 전체화면이면 모달, 아니면 대화화면 임베디드
+function clearYardChars(){ Object.values(yardChars).forEach(c=>{ try{ c.el.remove(); }catch(e){} }); yardChars={}; }
 function ensureChar(id,emoji,outfit,isMe){
-  const y=document.getElementById('yard'); if(!y||!id) return;
+  const y=getYardEl(); if(!y||!id) return;
   const c=yardChars[id];
   if(c){ if(c.emoji!==emoji || JSON.stringify(c.outfit||{})!==JSON.stringify(outfit||{})){ c.emoji=emoji; c.outfit=outfit; c.el.innerHTML=spriteInner(emoji,outfit); } return; }
   const el=document.createElement('div'); el.className='sprite'+(isMe?' me':'');
@@ -1526,7 +1534,7 @@ function syncYard(){
   Object.keys(yardChars).forEach(id=>{ if(!ids.has(id)) removeChar(id); });
 }
 function yardTick(){
-  if(!yardOpen) return;
+  if(!Object.keys(yardChars).length) return;
   Object.values(yardChars).forEach(c=>{
     const el=c.el, spe=el.querySelector('.spe'), r=Math.random();
     if(r<0.30){                                   // 활동(먹기·놀기·잠 등) + 깡총
@@ -1545,9 +1553,9 @@ function yardTick(){
     }
   });
 }
-function openYard(){
+function openYard(){   // 전체화면 '크게 보기'
   const modal=document.getElementById('yardModal'), y=document.getElementById('yard');
-  yardChars={}; yardOpen=true; modal.classList.add('on');
+  clearYardChars(); yardOpen=true; modal.classList.add('on');
   y.innerHTML=`<div class="yard-top"><span class="t">🏡 마당 · 함께 놀기</span><button class="yard-x" id="yardX">✕</button></div>
     <span class="yard-deco" style="top:14px;left:20px;font-size:30px">☀️</span>
     <span class="yard-deco" style="top:22px;right:70px;font-size:24px;animation:cloudmove 9s ease-in-out infinite alternate">☁️</span>
@@ -1556,12 +1564,14 @@ function openYard(){
     <span class="yard-deco" style="right:22%;bottom:9%;font-size:18px">🌼</span>
     <div class="yard-house">🏠</div>`;
   document.getElementById('yardX').onclick=closeYard;
-  if(P) ensureChar(P.id, P.emoji||'🦊', amyOutfit, true);
-  (yardList||[]).forEach(x=>{ if(!P||x.id!==P.id) ensureChar(x.id, x.emoji, x.outfit, false); });
-  presencePoll();
+  syncYard(); presencePoll();
   clearInterval(yardTickT); yardTickT=setInterval(yardTick,2600); setTimeout(yardTick,400);
 }
-function closeYard(){ yardOpen=false; document.getElementById('yardModal').classList.remove('on'); clearInterval(yardTickT); }
+function closeYard(){   // 전체화면 닫기 → 대화화면 임베디드로 캐릭터 복귀
+  yardOpen=false; document.getElementById('yardModal').classList.remove('on');
+  clearYardChars(); syncYard();
+  clearInterval(yardTickT); yardTickT=setInterval(yardTick,2600); setTimeout(yardTick,400);
+}
 
 /* ============ 시작 ============ */
 (async function init(){
