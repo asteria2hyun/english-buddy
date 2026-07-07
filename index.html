@@ -646,13 +646,23 @@ async function curShift(d){
   curStep=n; await store.set('curriculum:'+P.id,{step:curStep});
   renderCurriculumBanner(); renderParent();
 }
+async function curSet(step){   // 밴드/단계 바로 지정
+  if(!P) return;
+  curStep=Math.max(1,Math.min(CURRICULUM.length,step));
+  await store.set('curriculum:'+P.id,{step:curStep});
+  renderCurriculumBanner(); renderParent();
+}
 function curriculumParentCard(){
   const u=curInfo(); const pct=Math.round(u.step/CURRICULUM.length*100);
   return `<div class="card g"><div class="lbl">🧭 회화 커리큘럼 진도</div>
     <div style="font-weight:800;font-size:15px">Step ${u.step}/${CURRICULUM.length} · ${esc(u.title)} <span class="sub2">(${u.cefr})</span></div>
     <div class="sub2" style="margin:3px 0 8px">🎯 ${esc(u.canDo)}</div>
     <div class="cur-bar"><div class="cur-fill" style="width:${pct}%"></div></div>
-    <div style="display:flex;gap:8px;margin-top:10px">
+    <div class="sub2" style="margin:10px 0 4px">수준 바로 선택 (탭하면 그 밴드부터 시작)</div>
+    <div style="display:flex;gap:6px">
+      ${[['Pre-A1',1],['A1',5],['A2',9],['B1',12]].map(x=>`<button style="flex:1;border:1.5px solid ${u.cefr===x[0]?'var(--fox)':'var(--line)'};background:${u.cefr===x[0]?'var(--fox-soft)':'#fff'};color:${u.cefr===x[0]?'var(--fox)':'var(--sub)'};border-radius:12px;padding:9px 4px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit" onclick="curSet(${x[1]})">${x[0]}</button>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
       <button style="flex:1;border:1.5px solid var(--line);background:#fff;color:var(--sub);border-radius:12px;padding:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit" onclick="curShift(-1)">◀ 이전 단계</button>
       <button style="flex:1;border:1.5px solid var(--line);background:#fff;color:var(--sub);border-radius:12px;padding:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit" onclick="curShift(1)">다음 단계 ▶</button>
     </div>
