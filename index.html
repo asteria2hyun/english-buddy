@@ -950,7 +950,7 @@ async function renderStudent(){
 }
 
 /* ============ 단어 퀴즈 (누적된 단어 기반 4지선다) ============ */
-let quizQs=[], quizIdx=0, quizScore=0;
+let quizQs=[], quizIdx=0, quizScore=0, quizWrong=[], quizReview=false;   // quizWrong: 이번 회차 틀린 문제 / quizReview: 오답 복습 중(최고점·코인 미반영)
 async function collectQuizWords(){
   const map={};
   Object.values(liveVocab).forEach(v=>{ if(v&&v.word&&v.kr) map[v.word.toLowerCase()]={word:v.word,kr:v.kr}; });
@@ -1010,15 +1010,17 @@ async function openQuiz(){
   const ai=await aiQuiz(pool);                                  // 헷갈리는 보기의 뜻·영영·반대말·유의어
   // AI 문제가 충분하면 그것만(오답이 잘 헷갈림). 부족할 때만 로컬 뜻문제로 보충
   quizQs = ai.length>=4 ? shuffleArr(ai).slice(0,10) : shuffleArr(ai.concat(localMeaningQuiz(pool))).slice(0,10);
-  quizIdx=0; quizScore=0; renderQuizQ();
+  quizIdx=0; quizScore=0; quizWrong=[]; quizReview=false; renderQuizQ();
 }
 function renderQuizQ(){
   const body=document.getElementById('quizBody');
   if(quizIdx>=quizQs.length){
     const total=quizQs.length, pct=Math.round(quizScore/total*100);
-    if(P){ store.get('quizbest:'+P.id).then(prev=>{ if(pct>(prev||0)) store.set('quizbest:'+P.id,pct); }); store.set('quizday:'+P.id, dayKey()); addBonus(quizScore*2); }
+    if(P && !quizReview){ store.get('quizbest:'+P.id).then(prev=>{ if(pct>(prev||0)) store.set('quizbest:'+P.id,pct); }); store.set('quizday:'+P.id, dayKey()); addBonus(quizScore*2); }
     const face=pct>=80?'🌟':pct>=50?'🦊':'💪', msg=pct>=80?'최고야! 단어 박사! 🎉':pct>=50?'잘했어! 조금만 더!':'좋은 도전이야! 다시 해볼까?';
-    body.innerHTML=`<div class="pbig">${face}</div><h3>${msg}</h3><div class="pscore" style="color:var(--grass)">${quizScore} / ${total}</div><div class="prow"><button class="p-retry" id="qRetry">🔁 다시 풀기</button><button class="p-ok" id="qClose">확인</button></div>`;
+    const wrongBtn = quizWrong.length ? `<button class="p-retry" id="qWrong" style="width:100%;margin-bottom:8px">🔁 틀린 것만 다시 풀기 (${quizWrong.length})</button>` : '';
+    body.innerHTML=`<div class="pbig">${face}</div><h3>${msg}</h3><div class="pscore" style="color:var(--grass)">${quizScore} / ${total}</div>${wrongBtn}<div class="prow"><button class="p-retry" id="qRetry">🔁 새 문제로</button><button class="p-ok" id="qClose">확인</button></div>`;
+    const qw=document.getElementById('qWrong'); if(qw) qw.onclick=()=>{ const w=shuffleArr(quizWrong); quizWrong=[]; quizQs=w; quizIdx=0; quizScore=0; quizReview=true; renderQuizQ(); };   // 틀린 문제만 다시(복습 모드)
     document.getElementById('qRetry').onclick=openQuiz; document.getElementById('qClose').onclick=closeQuiz; return;
   }
   const q=quizQs[quizIdx];
@@ -1027,7 +1029,7 @@ function renderQuizQ(){
   body.querySelectorAll('.qopt').forEach(b=>b.onclick=()=>{
     const correct=b.dataset.o===q.answer;
     body.querySelectorAll('.qopt').forEach(x=>{ x.disabled=true; if(x.dataset.o===q.answer) x.classList.add('right'); else if(x===b) x.classList.add('wrong'); });
-    if(correct) quizScore++;
+    if(correct) quizScore++; else quizWrong.push(q);   // 틀린 문제 모아두기
     srsGrade(q.word, correct);   // 맞으면 복습 간격 늘리고, 틀리면 다시 자주 나오게
     setTimeout(()=>{ quizIdx++; renderQuizQ(); }, correct?750:1400);
   });
