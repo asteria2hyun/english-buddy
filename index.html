@@ -974,18 +974,25 @@ async function aiQuiz(words){
   const picked=shuffleArr(words).slice(0,8);
   const listStr=picked.map(w=>`- ${w.word} (${w.kr})`).join('\n');
   const seed=Math.floor(Math.random()*100000);
-  const system=`You make a fun but CHALLENGING English vocabulary quiz for a ${childAge}-year-old Korean learner. Words she has learned:
+  const lvl=levelInfo(levelEMA).n, _cu=curInfo();   // 레벨(1~5)·현재 단계에 맞춰 난이도 조절
+  const diff = lvl<=2
+    ? `She is a BEGINNER (level ${lvl}/5, age ${childAge}, ${_cu.cefr}). Make it EASY and encouraging — the correct answer should be findable. Wrong options are real but CLEARLY DIFFERENT in meaning from the answer (do NOT use tricky near-synonyms or subtle traps). Prefer "meaning" and "def". Keep every option short and very simple.`
+    : lvl===3
+    ? `She is at level ${lvl}/5 (age ${childAge}, ${_cu.cefr}). MEDIUM difficulty — wrong options are the same part of speech and loosely related, but still tellable apart with a little thought. Avoid very subtle traps.`
+    : `She is fairly strong (level ${lvl}/5, age ${childAge}, ${_cu.cefr}). Make it a real CHALLENGE — wrong options are the SAME category and confusable (예: 감정어의 오답도 다른 감정어), so she must think carefully.`;
+  const system=`You make a fun English vocabulary quiz for a ${childAge}-year-old Korean learner, MATCHED to her level. Words she has learned:
 ${listStr}
 
-Make 8 multiple-choice questions, MIXING these four types:
+DIFFICULTY: ${diff}
+
+Make 8 multiple-choice questions, MIXING these four types (favor "meaning"/"def" for lower levels, use more "antonym"/"synonym" for higher levels):
 - "meaning": show the WORD; the 4 options are Korean meanings; pick the correct meaning.
 - "def": show the WORD; the 4 options are SHORT simple English definitions; pick the correct one.
 - "antonym": show the WORD; the 4 options are English words; pick the OPPOSITE (반대말).
 - "synonym": show the WORD; the 4 options are English words; pick a word with a SIMILAR meaning (비슷한말).
-DISTRACTOR RULES (very important — the answer must NOT be obvious):
-- Wrong options must be PLAUSIBLE and hard to rule out: SAME part of speech and SAME category as the answer. For a feeling word use OTHER feelings (예: smile→웃다/미소 오답으로 행복한·신나는·부끄러운·놀란 처럼 감정어); for an action verb use other actions; for an animal use other animals.
-- NEVER include an obviously-unrelated option (예: 'smile'의 오답으로 '왼쪽으로 꺾다' 같은 건 절대 금지). Every option should look believable at first glance so she has to really think.
-Keep words/definitions simple enough for a ${childAge}-year-old. Exactly 4 options each, only ONE correct. Make it fresh (seed ${seed}). Do NOT use double quotes inside any option text.
+RULES:
+- NEVER include a silly, obviously-unrelated option (예: 'smile'의 오답으로 '왼쪽으로 꺾다' 금지). But scale how confusable the wrong options are to her level as described in DIFFICULTY.
+- Keep words/definitions simple enough for a ${childAge}-year-old. Exactly 4 options each, only ONE correct. Make it fresh (seed ${seed}). Do NOT use double quotes inside any option text.
 Return ONLY JSON (no markdown): {"questions":[{"type":"meaning|def|antonym|synonym","word":"the word","options":["...","...","...","..."],"answer":<0-3 correct index>}]}`;
   try{
     const res=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1600,system,messages:[{role:'user',content:'Make the quiz now.'}]})});
