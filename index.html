@@ -78,6 +78,12 @@
   .amybtns{ margin-top:7px; display:flex; gap:12px; }
   .amybtns span{ font-size:11px; font-weight:800; cursor:pointer; user-select:none; }
   .s-hear{ color:var(--fox); } .s-say{ color:var(--grass); }
+  /* 바로 고쳐 말하기 */
+  .recast{ margin-top:7px; font-size:13px; background:var(--grass-soft); border-radius:11px; padding:8px 11px; line-height:1.5; }
+  .recast .rc-say{ font-weight:700; color:var(--grass); } .recast .rc-say b{ color:var(--ink); font-weight:800; }
+  .rc-btns{ margin-top:6px; display:flex; gap:14px; }
+  .rc-btns span{ font-size:11.5px; font-weight:800; cursor:pointer; user-select:none; }
+  .rc-hear{ color:var(--fox); } .rc-shadow{ color:var(--grass); }
   .typing .bubble{ color:var(--sub); }
   .dot{ display:inline-block; animation:blink 1.2s infinite; } .dot:nth-child(2){animation-delay:.2s} .dot:nth-child(3){animation-delay:.4s}
   @keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
@@ -632,15 +638,17 @@ const chat=document.getElementById('chat'), txt=document.getElementById('txt'), 
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function scrollDown(){ chat.scrollTop=chat.scrollHeight; }
 function addMe(t){ const r=document.createElement('div'); r.className='row me'; r.innerHTML=`<div class="mini me">🧒</div><div class="bubble">${esc(t)}</div>`; chat.appendChild(r); scrollDown(); }
-function addAmy(reply,kr,fix){
+function addAmy(reply,kr,fix,better){
   const r=document.createElement('div'); r.className='row amy';
   // 회화 연습: 영어 문장을 화면에 보여주지 않음(읽고 따라하지 않도록). 음성으로만 듣고 대답.
   let h=`<div class="mini amy">${buddyEmoji()}</div><div class="bubble voice"><div class="vmrow"><div class="vmwave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><span class="vmlabel">🔊 듣고 대답해요</span></div>`;
   if(fix) h+=`<div class="fix">💡 ${esc(fix)}</div>`;
+  if(better) h+=`<div class="recast"><div class="rc-say">🔁 이렇게 말해봐: <b>${esc(better)}</b></div><div class="rc-btns"><span class="rc-hear">🔊 듣기</span><span class="rc-shadow">🎙️ 따라 말하기</span></div></div>`;
   h+=`<div class="amybtns"><span class="s-hear">🔊 다시 듣기</span><span class="s-say">🎙️ 따라 말하기</span></div></div>`;
   r.innerHTML=h;
   r.querySelector('.s-hear').onclick=()=>speak(reply);
   r.querySelector('.s-say').onclick=()=>startPron(reply);
+  if(better){ r.querySelector('.rc-hear').onclick=()=>speak(better); r.querySelector('.rc-shadow').onclick=()=>startPron(better); }
   chat.appendChild(r); scrollDown(); speak(reply,true);
 }
 function addTyping(){ const r=document.createElement('div'); r.className='row amy typing'; r.id='typing'; r.innerHTML=`<div class="mini amy">${buddyEmoji()}</div><div class="bubble"><span class="dot">●</span><span class="dot">●</span><span class="dot">●</span></div>`; chat.appendChild(r); scrollDown(); }
@@ -680,15 +688,16 @@ FULL-SENTENCE COACHING (important):
 Return ONLY a JSON object (no markdown) with keys:
 "reply": your English response (1-2 short sentences; usually ends with a question, but NOT when she is saying goodbye/leaving or the moment just calls for reacting warmly),
 "korean": natural Korean translation of your reply,
-"correction": if she made a grammar/word mistake OR answered with only a word/fragment, ONE short gentle Korean tip. For fragments, show the full English sentence she could say (e.g. "‘Blue’보다 ‘My favorite color is blue.’처럼 문장으로 말해봐요"); else "",
+"correction": if she made a grammar/word mistake OR answered with only a word/fragment, ONE short gentle Korean tip — the REASON / what to improve only (do NOT put the full English sentence here); else "",
+"better": the corrected or upgraded FULL ENGLISH sentence she should try to say (fix her mistake, or turn her one-word/fragment answer into a natural full sentence), e.g. "My favorite color is blue."; "" if there is nothing to correct,
 "level": integer 1-5 estimate of HER level from her message,
 "vocab": array (0-2) of words YOU used a beginner might not know, each {"word":"...","kr":"짧은 뜻"}; else [].`;
   try{
     const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:1000,system,messages:apiMessages})});
     const data=await res.json();
     const raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("").trim();
-    let obj; try{ obj=JSON.parse(raw.replace(/```json|```/g,'').trim()); }catch(e){ obj={reply:raw||"Let's try again!",korean:"",correction:"",level:target,vocab:[]}; }
-    rmTyping(); addAmy(obj.reply,obj.korean,obj.correction);
+    let obj; try{ obj=JSON.parse(raw.replace(/```json|```/g,'').trim()); }catch(e){ obj={reply:raw||"Let's try again!",korean:"",correction:"",better:"",level:target,vocab:[]}; }
+    rmTyping(); addAmy(obj.reply,obj.korean,obj.correction,obj.better);
     apiMessages.push({role:'assistant',content:obj.reply});
     sessionLog.push({child:userText,amy:obj.reply,correction:obj.correction||""});
     (obj.vocab||[]).forEach(v=>{ if(v&&v.word){ liveVocab[v.word.toLowerCase()]={kr:v.kr||"",word:v.word}; srsTouch(v.word,v.kr); } });
