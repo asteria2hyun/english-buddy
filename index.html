@@ -716,11 +716,20 @@ async function talk(userText){
   const weakNote=weakList.length?`\nHER RECURRING WEAK POINTS (from past reports): ${weakList.slice(-4).join(' / ')}. When it naturally comes up, gently help her with these — model the right form, never scold.`:"";
   const _cu=curInfo();
   const curriculumNote=activeScenario?"":`\nCURRICULUM FOCUS — Step ${_cu.step}/${CURRICULUM.length} "${_cu.title}" (${_cu.cefr}). Naturally steer this chat so she practices: ${_cu.focus}. Elicit or model these key words when it fits: ${_cu.vocab.join(', ')}. Keep it a fun, natural conversation (NOT a lesson) and follow the STYLE rules below.`;
+  const band=(_cu&&_cu.cefr)||'Pre-A1';
+  const styleNote = band==='Pre-A1'
+    ? `- Keep English SIMPLE and SHORT (1-2 sentences), but ALWAYS push a little: never let a one-word answer end the topic — ask ONE follow-up so she says a FULL sentence or one more detail ("Why?", "Tell me one more thing").`
+    : band==='A1'
+    ? `- Use short but slightly richer English (2-3 sentences OK). Expect FULL-SENTENCE answers WITH a reason. Often ask "why / how / what happened / tell me more" so she elaborates, and slip in ONE new useful word.`
+    : band==='A2'
+    ? `- Have a real back-and-forth (natural, still kid-friendly). Push her to EXPLAIN and think: ask for opinions with reasons, compare two things, talk about the past/future, imagine ("what if..."). Expect 2+ sentence answers and stretch her with new words/expressions.`
+    : `- Have a genuine DISCUSSION, not baby-talk: give your own short opinion and gently DEBATE ("I think..., what do you think? Why?"), ask her to compare, explain causes, persuade, or describe in detail. Expect several sentences and challenge her thinking while staying encouraging.`;
   const system=`You are Juny, a warm, patient, cheerful English tutor (a friendly fox) for a ${childAge}-year-old Korean child. This is a speaking practice study.
 ${askedNote}${memNote}${scenarioNote}${reviewNote}${weakNote}${curriculumNote}
 Her current level is about ${target} out of 5 (1=absolute beginner, 5=fluent kid).
 STYLE:
-- Speak in SIMPLE, SHORT English, only 1-2 short sentences. Match difficulty to level ${target}.
+${styleNote}
+- GROWTH (i+1, important): always aim ONE step ABOVE her comfort so she actually IMPROVES. Never accept a too-easy or one-word answer as the end — follow up so she produces MORE and richer language. Teach a new word or expression when it naturally fits and show its short meaning.
 - Be warm and encouraging, but do NOT call her by name — never say her name or insert it into sentences. Just talk naturally.
 - USUALLY end with ONE easy, OPEN-ENDED question she can explain or describe — ask "what / why / how / tell me about...", and avoid yes/no questions ("Do you like...?", "Is it...?"). But read the CONTEXT below first.
 CONTEXT & FLOW (very important — be a real friend who is listening, NOT a question machine):
