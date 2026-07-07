@@ -571,7 +571,10 @@ function startScenario(key){
   if(key==='free'){
     activeScenario=null; renderScenarioChips();
     const st=document.getElementById('starter');
-    if(!chat.children.length){ st.style.display='block'; newStarter(); speak(document.getElementById('stQ').textContent); }
+    if(!chat.children.length){ st.style.display='block'; newStarter(); pendingStarter=null;   // 자유 대화: 아이가 먼저 시작(질문 자동으로 안 읽음)
+      const _st=document.getElementById('amyStatus'); if(_st) _st.textContent='🎤 네가 먼저 영어로 말을 걸어봐!';
+      const _cap=document.querySelector('#starter .cap'); if(_cap) _cap.textContent='🎲 무슨 말 할지 모르겠으면 · 🔊 오늘의 질문 듣기';
+    }
     return;
   }
   const sc=SCENARIOS.find(s=>s.key===key); if(!sc) return;
@@ -703,6 +706,7 @@ FULL-SENTENCE COACHING (important):
 - If she answered with only ONE word or a short fragment (e.g. "Blue.", "Dog", "Yes"), FIRST praise it, THEN show her how to say it as a FULL sentence and invite her to try, e.g. "Nice! You can also say: 'My favorite color is blue.' Can you say the whole sentence?".
 - Model complete sentences with subject + verb. Keep encouraging her to speak in full sentences, but never scold. For very low level (1), one short full sentence is enough.
 - When she DOES answer in a full sentence, praise that effort specifically ("Great full sentence!").
+- SPOKEN CORRECTION (important): whenever you give a non-empty "better" sentence, your spoken "reply" MUST say that corrected sentence OUT LOUD and warmly invite her to repeat it — e.g. "Good try! You can say it even better: 'I feel worried because my daughter is sick.' Can you say it too?" On THAT turn do NOT also ask a new different question — repeating the sentence IS the task. On the NEXT turn, praise her for repeating it, then continue naturally.
 Return ONLY a JSON object (no markdown) with keys:
 "reply": your English response (1-2 short sentences; usually ends with a question, but NOT when she is saying goodbye/leaving or the moment just calls for reacting warmly),
 "korean": natural Korean translation of your reply,
@@ -738,7 +742,7 @@ Return ONLY a JSON object (no markdown) with keys:
 function submit(){ const v=txt.value.trim(); if(!v)return; txt.value=''; talk(v); }
 document.getElementById('send').onclick=submit;
 txt.addEventListener('keydown',e=>{ if(e.key==='Enter') submit(); });
-document.getElementById('stHear').onclick=()=>speak(document.getElementById('stQ').textContent);
+document.getElementById('stHear').onclick=()=>{ pendingStarter=document.getElementById('stQ').textContent; speak(document.getElementById('stQ').textContent); };   // 질문을 들으면 그 질문에 답하는 맥락으로
 document.getElementById('stNew').onclick=()=>{ newStarter(); speak(document.getElementById('stQ').textContent); };
 
 /* ============ 발음 채점 (따라 말하기) ============ */
@@ -1356,9 +1360,11 @@ function resetSession(){
   const cb=document.getElementById('convoBtn'); if(cb){ cb.classList.remove('on'); cb.textContent='▶️ 계속 대화하기 (핸즈프리)'; } mic.classList.remove('rec');
   chat.innerHTML=''; document.getElementById('finishWrap').style.display='none';
   curAdvancedThisSession=false; renderCurriculumBanner();
-  document.getElementById('starter').style.display='block'; newStarter(); renderScenarioChips();
+  document.getElementById('starter').style.display='block'; newStarter(); pendingStarter=null; renderScenarioChips();
   renderParent(); renderStudent();
-  setTimeout(()=>speak(document.getElementById('stQ').textContent),400);
+  // 자유 대화: 아이가 먼저 대화를 시작(Juny가 질문을 자동으로 읽지 않음). 막히면 아래 '오늘의 질문'을 들을 수 있음
+  const _st=document.getElementById('amyStatus'); if(_st) _st.textContent='🎤 네가 먼저 영어로 말을 걸어봐!';
+  const _cap=document.querySelector('#starter .cap'); if(_cap) _cap.textContent='🎲 무슨 말 할지 모르겠으면 · 🔊 오늘의 질문 듣기';
 }
 document.getElementById('hAvatar').onclick=openSheet;
 document.getElementById('hSwitch').onclick=openSheet;
