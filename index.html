@@ -1360,7 +1360,7 @@ function renderProfileSheet(){
 async function deleteProfile(id){
   const keys=await store.list(`report:${id}:`); for(const k of keys) await store.del(k);
   // 이 학생의 나머지 데이터 키도 모두 정리 → 잔재로 유령 프로필이 되살아나지 않게
-  for(const pre of ['memory:','badges:','srs:','weak:','curriculum:','quizday:','missionday:','quizbest:','coinbonus:','coinspent:','owned:','amyOutfit:']) await store.del(pre+id);
+  for(const pre of ['memory:','badges:','srs:','weak:','curriculum:','quizday:','missionday:','quizbest:','coinbonus:','coinspent:','owned:','amyOutfit:','active:']) await store.del(pre+id);
   profiles=profiles.filter(p=>p.id!==id); await saveProfiles();
   if(activeId===id){ activeId=null; P=null; }
   renderProfileSheet(); if(profiles.length===0){ document.getElementById('profileSheet').classList.add('on'); }
@@ -1373,13 +1373,24 @@ document.getElementById('addBtn').onclick=async()=>{
   profiles.push(p); await saveProfiles(); document.getElementById('newName').value=''; document.getElementById('newAge').value='';
   await selectProfile(p.id);
 };
+function startStepForAge(age){ age=age||10; return age<=6?1: age<=7?2: age<=8?3: age<=9?4: age<=10?5: age<=11?6: 7; }   // 나이별 시작 단계
 async function selectProfile(id){
-  activeId=id; await store.set('activeId',id); P=profiles.find(p=>p.id===id); if(!P) return;
+  const prof=profiles.find(p=>p.id===id); if(!prof) return;
+  // 동시 사용 방지: 이 학생이 다른 기기에서 사용 중이면 확인
+  try{
+    const lock=await store.get('active:'+id);
+    if(lock && lock.s && lock.s!==sessionId && (Date.now()-(lock.ts||0) < 35000)){
+      if(!confirm(`${prof.name}은(는) 지금 다른 기기에서 쓰고 있어요.\n여기서 사용하면 그 기기는 멈춰요. 계속할까요?`)) return;
+    }
+    await store.set('active:'+id, {s:sessionId, ts:Date.now()});
+  }catch(e){}
+  activeId=id; await store.set('activeId',id); P=prof;
   childName=P.name; childAge=P.age||10; levelEMA=P.level||1.6;
   const _m=(await store.get('memory:'+P.id))||[]; profileMemory=_m.slice(-6).join(' ');   // 과거 대화 기억 로드
   srsMap=(await store.get('srs:'+P.id))||{};   // 어휘 간격반복 상태 로드
   weakList=(await store.get('weak:'+P.id))||[];   // 반복 약점 로드
-  const _cu=await store.get('curriculum:'+P.id); curStep=(_cu&&_cu.step)?_cu.step:1;   // 커리큘럼 단계 로드
+  const _cu=await store.get('curriculum:'+P.id);
+  if(_cu&&_cu.step){ curStep=_cu.step; } else { curStep=startStepForAge(childAge); store.set('curriculum:'+P.id,{step:curStep}); }   // 저장된 단계 없으면 나이에 맞게 시작
   histProfileId=P.id;   // 기록 탭 기본 = 현재 프로필
   amyOutfit=(await store.get('amyOutfit:'+P.id))||{}; renderAmy();   // Amy 꾸미기 로드
   document.getElementById('hAvatar').textContent=P.emoji;
@@ -1465,7 +1476,25 @@ if(SR){
 
 /* ============ 접속 프레즌스 + 🏡 마당 ============ */
 let presenceBeatT=null, presencePollT=null, yardOpen=false, yardChars={}, yardTickT=null, yardList=[];
-async function presenceBeat(){ if(!P||document.hidden) return; try{ await fetch('/api/presence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:P.id, emoji:P.emoji||'🦊', outfit:amyOutfit||{}})}); }catch(e){} }
+// 이 기기 고유 ID (브라우저별로 고정 → 새로고침해도 유지, 다른 기기와는 다름)
+const sessionId=(function(){ try{ let s=localStorage.getItem('eb_session'); if(!s){ s='dev'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); localStorage.setItem('eb_session',s); } return s; }catch(e){ return 'dev'+Math.random().toString(36).slice(2); } })();
+async function presenceBeat(){
+  if(!P||document.hidden) return;
+  try{ await fetch('/api/presence',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:P.id, emoji:P.emoji||'🦊', outfit:amyOutfit||{}})}); }catch(e){}
+  // 프로필 동시 사용 방지: 락이 다른 기기 것으로 바뀌었으면 이 기기는 멈춤
+  try{
+    const lock=await store.get('active:'+P.id);
+    if(lock && lock.s && lock.s!==sessionId && (Date.now()-(lock.ts||0) < 35000)){ takenOver(); return; }
+    await store.set('active:'+P.id, {s:sessionId, ts:Date.now()});   // 내 락 갱신
+  }catch(e){}
+}
+function takenOver(){
+  clearInterval(presenceBeatT); clearInterval(presencePollT);
+  if(yardOpen) closeYard();
+  P=null; activeId=null;
+  alert('앗! 이 학생을 다른 기기에서 켰어요.\n한 학생은 한 기기에서만 쓸 수 있어요. 🙂');
+  openSheet();
+}
 async function presencePoll(){ if(document.hidden) return; try{ const r=await fetch('/api/presence'); const d=await r.json(); yardList=(d&&d.list)||[]; if(yardOpen) syncYard(); }catch(e){} }
 function startPresence(){ clearInterval(presenceBeatT); clearInterval(presencePollT); presenceBeat(); presencePoll(); presenceBeatT=setInterval(presenceBeat,15000); presencePollT=setInterval(presencePoll,15000); }
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden){ presenceBeat(); presencePoll(); } });
