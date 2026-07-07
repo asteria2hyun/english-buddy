@@ -65,7 +65,9 @@
   .starter .row button{ border:none; border-radius:12px; padding:8px 12px; font-size:12.5px; font-weight:800; cursor:pointer; font-family:inherit; }
   .b-hear{ background:var(--sun); color:#6b4b12; } .b-new{ background:#fff; color:var(--amber); border:1.5px solid var(--sun) !important; }
 
-  .chat{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:13px 13px 6px; display:flex; flex-direction:column; gap:12px; }
+  /* 가운데 스크롤 영역: 질문·캐릭터·대화가 함께 스크롤, 입력창은 항상 하단 고정 */
+  .chatscroll{ flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; }
+  .chat{ flex:1 1 auto; padding:13px 13px 6px; display:flex; flex-direction:column; gap:12px; }
   .row{ display:flex; gap:8px; align-items:flex-end; max-width:90%; }
   .row.me{ align-self:flex-end; flex-direction:row-reverse; }
   .mini{ width:29px; height:29px; border-radius:50%; display:grid; place-items:center; font-size:15px; flex:0 0 auto; }
@@ -324,6 +326,7 @@
   <section class="view on" id="v-chat">
     <div class="curbar" id="curBar"></div>
     <div class="scenarios" id="scenarios"></div>
+    <div class="chatscroll" id="chatScroll">
     <div class="starter" id="starter">
       <div class="cap">🎲 오늘의 질문 · 🔊 듣고 영어로 대답해요</div>
       <div class="q" id="stQ">—</div>
@@ -341,6 +344,7 @@
     <div class="chat" id="chat"></div>
     <div class="finish-wrap" id="finishWrap" style="display:none;">
       <button class="finish" id="btnFinish">📋 오늘 회화 정리하고 보고서 만들기</button>
+    </div>
     </div>
     <div class="composer">
       <button class="convo" id="convoBtn">▶️ 계속 대화하기 (핸즈프리)</button>
@@ -636,7 +640,7 @@ function afterAmy(){ if(continuousMode && recMode==='chat' && !awaitingReply) st
 /* ============ 채팅 렌더 ============ */
 const chat=document.getElementById('chat'), txt=document.getElementById('txt'), hint=document.getElementById('hint');
 function esc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
-function scrollDown(){ chat.scrollTop=chat.scrollHeight; }
+function scrollDown(){ const cs=document.getElementById('chatScroll'); if(cs) cs.scrollTop=cs.scrollHeight; else chat.scrollTop=chat.scrollHeight; }
 function addMe(t){ const r=document.createElement('div'); r.className='row me'; r.innerHTML=`<div class="mini me">🧒</div><div class="bubble">${esc(t)}</div>`; chat.appendChild(r); scrollDown(); }
 function addAmy(reply,kr,fix,better){
   const r=document.createElement('div'); r.className='row amy';
